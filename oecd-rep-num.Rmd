@@ -1,0 +1,202 @@
+---
+title: "Effective Reproduction Number: Israel vs. OECD"
+author: "Itamar Caspi"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+    highlight: haddock
+    keep_md: no
+    theme: journal
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+abstract: |
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = TRUE,
+                      echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+
+## Load packages
+```{r}
+library(tidyverse)
+library(EpiEstim)
+library(lubridate)
+library(tidycovid19)
+library(countrycode)
+library(scales)
+library(hrbrthemes)
+```
+
+## Read data
+```{r}
+df_ecdc <- download_ecdc_covid19_data(cached = FALSE)
+```
+
+## Process data
+```{r}
+df <- 
+  df_ecdc %>% 
+  mutate(
+    date = ymd(date)
+  ) %>% 
+  select(iso3c, date, cases, deaths)
+```
+
+# OECD country names list
+```{r}
+oecd_names <- c("Israel", "Austria", "Belgium", "Czech Republic", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Luxembourg", "Netherlands", "Norway", "Poland", "Portugal", "Slovak Republic", "Slovenia", "Spain", "Sweden", "Switzerland", "United Kingdom",  "Canada", "Chile", "Mexico", "United States", "Australia", "Japan", "Korea", "New Zealand", "Turkey")
+```
+
+```{r}
+oecd_iso3c <- 
+  countrycode(
+    oecd_names,
+    origin = "country.name",
+    destination = "iso3c"
+  )
+```
+
+```{r}
+df_oecd <- 
+  df %>% 
+  filter(iso3c %in% oecd_iso3c) 
+```
+
+## A function that estimates R
+```{r}
+estimate_r <- function(incid, output) {
+  
+  model <- 
+    estimate_R(
+      incid = incid, 
+      method = "parametric_si",
+      config = make_config(list(mean_si = 5.8, std_si = 2.9))
+    )
+  
+  rep_num <- model$R[[3]]
+    
+  output <-cbind(output, rep_num)
+  
+  return(output)
+}
+```
+
+## Estimate R for OECD countries
+```{r}
+output <- c()
+
+for (i in oecd_iso3c){
+
+  incid <- 
+    df_oecd %>%
+    filter(
+      date >= ymd("2020-03-15"),
+      iso3c == i
+    ) %>%
+    select(date, cases) %>%
+    rename(dates = date, I = cases)
+
+  tryCatch(
+  output <- estimate_r(incid, output),
+  error = function(e) e
+  )
+
+}
+```
+
+## Estimate R for Israel
+```{r}
+incid <- 
+  df_oecd %>%
+  filter(
+    date >= ymd("2020-03-15"),
+    iso3c == "ISR"
+  ) %>%
+  select(date, cases) %>%
+  rename(dates = date, I = cases)
+
+model <- 
+  estimate_R(
+    incid = incid, 
+    method = "parametric_si",
+    config = make_config(list(mean_si = 5.8, std_si = 2.9))
+  )
+  
+isr_rep_num <- 
+  model$R %>% 
+  select(3) %>% 
+  pull()
+    
+output <- 
+  cbind(isr_rep_num, output)
+```
+
+## Calculate summary statistics
+```{r}
+df_R <- 
+  output %>% 
+  as_tibble()
+```
+
+```{r}
+df_R_q <- 
+  df_R %>% 
+  rowwise() %>% 
+  mutate(
+    q50 = quantile((c_across(rep_num:V29)), probs = 0.50),
+    q90 = quantile((c_across(rep_num:V29)), probs = 0.90),
+    q10 = quantile((c_across(rep_num:V29)), probs = 0.10)
+  ) %>%
+  select(isr_rep_num, starts_with("q")) %>% 
+  ungroup() %>% 
+  mutate(
+    date = seq(from = ymd("2020-03-23"), by = "1 day", length.out = dim(output)[[1]])
+  )
+```
+
+## Plot results
+```{r}
+df_R_q %>% 
+  filter(date >= ymd("2020-03-15")) %>% 
+  ggplot(aes(x = date, y = q50)) +
+  geom_line(
+    aes(x = date, y = q50, color = "OECD median"),
+    size = 1,
+    color = "#6DCD59"
+  ) +
+  geom_line(
+    aes(x = date, y = isr_rep_num),
+    color = "#3E4A89",
+    size = 1,
+  ) +
+  geom_ribbon(
+    aes(ymin = q10, ymax = q90),
+    fill = "#6DCD59",
+    alpha = 0.2
+  ) +
+  geom_hline(aes(yintercept = 1), color = "black", linetype = 2, size = 0.5) +
+  geom_hline(aes(yintercept = 0.8), color = "black", linetype = 3, size = 0.5) +
+  annotate("text", x = ymd("2020-10-29"), y = 1.20, label = "OECD", color = "#6DCD59") +
+  annotate("text", x = ymd("2020-10-29"), y = 0.55, label = "Israel", color = "#3E4A89") +
+  labs(
+    y = "R",
+    x = "",
+    title = "Effective Reproduction Number",
+    subtitle = "Israel, OECD median, and OECD 10-90 percentile range",
+    color = "",
+    lty = "",
+    caption = "Data source: ECDC."
+  ) +
+  scale_x_date(labels = date_format("%d/%m")) +
+  theme(
+    legend.position="top",
+    plot.caption = element_text(hjust = 0)
+  ) +
+  theme_ipsum()
+```
