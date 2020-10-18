@@ -180,14 +180,13 @@ df_R_q %>%
     alpha = 0.2
   ) +
   geom_hline(aes(yintercept = 1), color = "black", linetype = 2, size = 0.5) +
-  geom_hline(aes(yintercept = 0.8), color = "black", linetype = 3, size = 0.5) +
-  annotate("text", x = ymd("2020-10-29"), y = 1.20, label = "OECD", color = "#6DCD59") +
-  annotate("text", x = ymd("2020-10-29"), y = 0.55, label = "Israel", color = "#3E4A89") +
+  annotate("text", x = ymd("2020-10-30"), y = 1.20, label = "OECD", color = "#6DCD59") +
+  annotate("text", x = ymd("2020-10-30"), y = 0.55, label = "Israel", color = "#3E4A89") +
   labs(
     y = "R",
     x = "",
     title = "Effective Reproduction Number",
-    subtitle = "Israel, OECD median, and OECD 10-90 percentile range",
+    subtitle = "Israel, OECD median and 10-90 percentile range",
     color = "",
     lty = "",
     caption = "Data source: ECDC."
@@ -197,5 +196,6 @@ df_R_q %>%
     legend.position="top",
     plot.caption = element_text(hjust = 0)
   ) +
+  ylim(0,4) +
   theme_ipsum()
 ```
