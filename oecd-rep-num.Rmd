@@ -160,6 +160,17 @@ df_R_q <-
 ```
 
 ## Plot results
+Store information regarding the latest values (used in the plot)
+```{r}
+last_obs <- df_R_q %>% 
+  slice(dim(output)[[1]])
+
+last_date   <- last_obs %>% pull(date) + days(15)
+last_oecd   <- last_obs %>% pull(q50) %>% unname() + 0.1
+last_israel <- last_obs %>% pull(isr_rep_num) %>% unname() + 0.1
+```
+
+plot the figure
 ```{r}
 df_R_q %>% 
   filter(date >= ymd("2020-03-15")) %>% 
@@ -179,9 +190,9 @@ df_R_q %>%
     fill = "#6DCD59",
     alpha = 0.2
   ) +
-  geom_hline(aes(yintercept = 1), color = "black", linetype = 2, size = 0.5) +
-  annotate("text", x = ymd("2020-10-30"), y = 1.20, label = "OECD", color = "#6DCD59") +
-  annotate("text", x = ymd("2020-10-30"), y = 0.55, label = "Israel", color = "#3E4A89") +
+  geom_hline(aes(yintercept = 1), color = "black", linetype = 3, size = 0.5) +
+  annotate("text", x = last_date, y = last_oecd, label = "OECD", color = "#6DCD59") +
+  annotate("text", x = last_date, y = last_israel, label = "Israel", color = "#3E4A89") +
   labs(
     y = "R",
     x = "",
