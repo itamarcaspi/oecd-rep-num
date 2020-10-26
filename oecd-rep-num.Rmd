@@ -12,6 +12,7 @@ output:
     toc_depth: 4
     toc_float: yes
 abstract: |
+  The following code estimates the effective reproduction number $R_t$ for Israel and compares it to the distribution of other OECD countries' $R_t$ over time.
 ---
 
 ```{r setup, include=FALSE}
@@ -24,16 +25,18 @@ knitr::opts_chunk$set(eval = TRUE,
 ## Load packages
 
 ```{r}
-library(tidyverse)
-library(EpiEstim)
-library(lubridate)
-library(tidycovid19)
-library(countrycode)
-library(scales)
-library(hrbrthemes)
+library(tidyverse)   # for wrangling and plotting data
+library(EpiEstim)    # for estimating R_t
+library(lubridate)   # for handling dates
+library(tidycovid19) # for downloading ECDC data
+library(countrycode) # for handling country codes
+library(scales)      # for dates on the x-axis
+library(hrbrthemes)  # for a nice figure theme
 ```
 
 ## Read data
+
+Download ECDC case data using the [`{tidycovid19}`](https://joachim-gassen.github.io/tidycovid19/) package
 
 ```{r}
 df_ecdc <- download_ecdc_covid19_data(cached = TRUE)
@@ -41,20 +44,26 @@ df_ecdc <- download_ecdc_covid19_data(cached = TRUE)
 
 ## Process data
 
+Filter new cases for each country
+
 ```{r}
 df <- 
   df_ecdc %>% 
   mutate(
     date = ymd(date)
   ) %>% 
-  select(iso3c, date, cases, deaths)
+  select(iso3c, date, cases)
 ```
 
 ## OECD country names list
 
+Names of OECD countries
+
 ```{r}
 oecd_names <- c("Israel", "Austria", "Belgium", "Czech Republic", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Luxembourg", "Netherlands", "Norway", "Poland", "Portugal", "Slovak Republic", "Slovenia", "Spain", "Sweden", "Switzerland", "United Kingdom",  "Canada", "Chile", "Mexico", "United States", "Australia", "Japan", "Korea", "New Zealand", "Turkey")
 ```
+
+Turn names to iso3c codes using the [`{countrycode}`](https://cran.r-project.org/web/packages/countrycode/countrycode.pdf) package
 
 ```{r}
 oecd_iso3c <- 
@@ -65,14 +74,16 @@ oecd_iso3c <-
   )
 ```
 
+Filter OECD countries
 ```{r}
 df_oecd <- 
   df %>% 
   filter(iso3c %in% oecd_iso3c) 
 ```
 
-## A function that estimates R
+## A function that estimates $R_t$
 
+We now write a function that estimates $R_t$ using the [`{EpiEstim}`](https://cran.r-project.org/web/packages/EpiEstim/index.html) package
 ```{r}
 estimate_r <- function(incid, output) {
   
@@ -91,8 +102,9 @@ estimate_r <- function(incid, output) {
 }
 ```
 
-## Estimate R for OECD countries
+## Estimate $R_t$ for OECD countries
 
+Estimate $R_t$ for each OECD country, and ignore those for which the function throws an error (probably due to data issues).
 ```{r}
 output <- c()
 
@@ -115,8 +127,9 @@ for (i in oecd_iso3c){
 }
 ```
 
-## Estimate R for Israel
+## Estimate $R_t$ for Israel
 
+Now we estimate Israel $R_t$ and add it to the output table.
 ```{r}
 incid <- 
   df_oecd %>%
@@ -143,14 +156,16 @@ output <-
   cbind(isr_rep_num, output)
 ```
 
-## Calculate summary statistics
+## Calculate median and percentiles
 
+Dataframe to tibble
 ```{r}
 df_R <- 
   output %>% 
   as_tibble()
 ```
 
+Calculate the median and 10-90 quantiles, by rows (i.e., dates)
 ```{r}
 df_R_q <- 
   df_R %>% 
@@ -169,7 +184,7 @@ df_R_q <-
 
 ## Plot results
 
-Store information regarding the latest values (used in the plot)
+Store information regarding the latest values (will be used in the plot to annotate the lines.)
 
 ```{r}
 last_obs <- df_R_q %>% 
@@ -205,7 +220,7 @@ df_R_q %>%
   annotate("text", x = last_date, y = last_oecd, label = "OECD", color = "#6DCD59") +
   annotate("text", x = last_date, y = last_israel, label = "Israel", color = "#3E4A89") +
   labs(
-    y = "R",
+    y = expression("R"[t]),
     x = "",
     title = "Effective Reproduction Number",
     subtitle = "Israel, OECD median and 10-90 percentile range",
@@ -223,6 +238,8 @@ df_R_q %>%
 ```
 
 ## Save to File
+
+Save data to a csv file.
 ```{r}
 write_csv(df_R_q, path = "output/oecd-rep-num.csv")
 ```

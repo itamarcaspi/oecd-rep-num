@@ -58,7 +58,9 @@ oecd_iso3c <-
 ```{r}
 df_oecd <- 
   df %>% 
-  filter(iso3c %in% oecd_iso3c) 
+  filter(
+    iso3c %in% oecd_iso3c
+  ) 
 ```
 
 
@@ -75,13 +77,14 @@ df_oecd %>%
   ) %>% 
   ggplot(aes(date, dcases_per_capita_ma, color = country)) +
   geom_line() +
-  gghighlight(country %in% c("Israel", "Spain")) +
-  theme_ipsum()+
+  gghighlight(country %in% c("Israel", "Spain", "United States", "United Kingdom")) +
+  theme_ipsum(16)+
   scale_colour_viridis_d() +
   labs(
     title = "Daily new cases in OECD countries",
     y = "Daily new cases per 100,000\n(7-day moving average)",
-    caption = ""
+    x = "",
+    caption = "Notes: The sample is limited to countries with a population exceeding 1 million.\nData source: Johns Hopkins University Center for Systems Science and Engineering (JHH CSSE)."
   )
 
 ```
@@ -105,8 +108,7 @@ plot_covid19_spread(
   scale_colour_viridis_d() +
   labs(
     title = "Daily new cases in OECD countries",
-    y = "Daily new cases per 100,000\n(7-day moving average)",
-    caption = ""
+    y = "Daily new cases per 100,000\n(7-day moving average)"
   )
 ```
 
