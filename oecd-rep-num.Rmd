@@ -22,6 +22,7 @@ knitr::opts_chunk$set(eval = TRUE,
 ```
 
 ## Load packages
+
 ```{r}
 library(tidyverse)
 library(EpiEstim)
@@ -33,11 +34,13 @@ library(hrbrthemes)
 ```
 
 ## Read data
+
 ```{r}
-df_ecdc <- download_ecdc_covid19_data(cached = FALSE)
+df_ecdc <- download_ecdc_covid19_data(cached = TRUE)
 ```
 
 ## Process data
+
 ```{r}
 df <- 
   df_ecdc %>% 
@@ -48,6 +51,7 @@ df <-
 ```
 
 ## OECD country names list
+
 ```{r}
 oecd_names <- c("Israel", "Austria", "Belgium", "Czech Republic", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Luxembourg", "Netherlands", "Norway", "Poland", "Portugal", "Slovak Republic", "Slovenia", "Spain", "Sweden", "Switzerland", "United Kingdom",  "Canada", "Chile", "Mexico", "United States", "Australia", "Japan", "Korea", "New Zealand", "Turkey")
 ```
@@ -68,6 +72,7 @@ df_oecd <-
 ```
 
 ## A function that estimates R
+
 ```{r}
 estimate_r <- function(incid, output) {
   
@@ -75,7 +80,7 @@ estimate_r <- function(incid, output) {
     estimate_R(
       incid = incid, 
       method = "parametric_si",
-      config = make_config(list(mean_si = 5.8, std_si = 2.9))
+      config = make_config(list(mean_si = 4.5, std_si = 3.5))
     )
   
   rep_num <- model$R[[3]]
@@ -87,6 +92,7 @@ estimate_r <- function(incid, output) {
 ```
 
 ## Estimate R for OECD countries
+
 ```{r}
 output <- c()
 
@@ -110,6 +116,7 @@ for (i in oecd_iso3c){
 ```
 
 ## Estimate R for Israel
+
 ```{r}
 incid <- 
   df_oecd %>%
@@ -124,7 +131,7 @@ model <-
   estimate_R(
     incid = incid, 
     method = "parametric_si",
-    config = make_config(list(mean_si = 5.8, std_si = 2.9))
+    config = make_config(list(mean_si = 4.5, std_si = 3.5))
   )
   
 isr_rep_num <- 
@@ -137,6 +144,7 @@ output <-
 ```
 
 ## Calculate summary statistics
+
 ```{r}
 df_R <- 
   output %>% 
@@ -160,7 +168,9 @@ df_R_q <-
 ```
 
 ## Plot results
+
 Store information regarding the latest values (used in the plot)
+
 ```{r}
 last_obs <- df_R_q %>% 
   slice(dim(output)[[1]])
@@ -171,6 +181,7 @@ last_israel <- last_obs %>% pull(isr_rep_num) %>% unname() + 0.1
 ```
 
 plot the figure
+
 ```{r}
 df_R_q %>% 
   filter(date >= ymd("2020-03-15")) %>% 
@@ -209,4 +220,9 @@ df_R_q %>%
   ) +
   ylim(0,4) +
   theme_ipsum()
+```
+
+## Save to File
+```{r}
+write_csv(df_R_q, path = "output/oecd-rep-num.csv")
 ```

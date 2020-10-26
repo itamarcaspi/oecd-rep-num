@@ -1,0 +1,112 @@
+---
+title: "Caese and Deaths: Israel vs. OECD"
+author: "Itamar Caspi"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+    highlight: haddock
+    keep_md: no
+    theme: journal
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+abstract: |
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = TRUE,
+                      echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+## Load packages
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(tidycovid19)
+library(countrycode)
+library(scales)
+library(hrbrthemes)
+library(zoo)
+library(gghighlight)
+```
+
+## Read data
+
+```{r}
+df <- download_merged_data(cached = TRUE)
+```
+
+## OECD country names list
+
+```{r}
+oecd_names <- c("Israel", "Austria", "Belgium", "Czech Republic", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Luxembourg", "Netherlands", "Norway", "Poland", "Portugal", "Slovak Republic", "Slovenia", "Spain", "Sweden", "Switzerland", "United Kingdom",  "Canada", "Chile", "Mexico", "United States", "Australia", "Japan", "Korea", "New Zealand", "Turkey")
+```
+
+```{r}
+oecd_iso3c <- 
+  countrycode(
+    oecd_names,
+    origin = "country.name",
+    destination = "iso3c"
+  )
+```
+
+```{r}
+df_oecd <- 
+  df %>% 
+  filter(iso3c %in% oecd_iso3c) 
+```
+
+
+```{r}
+df_oecd %>% 
+  mutate(
+    cases_per_capita = ecdc_cases / population * 1e6,
+    dcases_per_capita = cases_per_capita - lag(cases_per_capita),
+    dcases_per_capita_ma = rollmean(dcases_per_capita, 7, na.pad=TRUE, align="right")
+  ) %>% 
+    filter(
+    population >= 1e6,
+    date >= ymd("2020-03-01")
+  ) %>% 
+  ggplot(aes(date, dcases_per_capita_ma, color = country)) +
+  geom_line() +
+  gghighlight(country %in% c("Israel", "Spain")) +
+  theme_ipsum()+
+  scale_colour_viridis_d() +
+  labs(
+    title = "Daily new cases in OECD countries",
+    y = "Daily new cases per 100,000\n(7-day moving average)",
+    caption = ""
+  )
+
+```
+
+
+```{r}
+plot_covid19_spread(
+  df_oecd,
+  type = "confirmed",
+  min_cases = 50,
+  edate_cutoff = 250, 
+  cumulative = FALSE,
+  per_capita = TRUE,
+  per_capita_x_axis = FALSE,
+  change_ave = 7, 
+  highlight = c("ISR", "GBR", "USA", "ESP"),
+  log_scale = FALSE,
+  data_date_str = "2020-10-25",
+  population_cutoff = 1
+) +
+  scale_colour_viridis_d() +
+  labs(
+    title = "Daily new cases in OECD countries",
+    y = "Daily new cases per 100,000\n(7-day moving average)",
+    caption = ""
+  )
+```
+
