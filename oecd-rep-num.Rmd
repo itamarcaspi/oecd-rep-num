@@ -32,6 +32,8 @@ library(tidycovid19) # for downloading ECDC data
 library(countrycode) # for handling country codes
 library(scales)      # for dates on the x-axis
 library(hrbrthemes)  # for a nice figure theme
+library(zoo)         # for rolling means
+library(gghighlight) # for highlighting plots
 ```
 
 ## Read data
@@ -39,7 +41,8 @@ library(hrbrthemes)  # for a nice figure theme
 Download ECDC case data using the [`{tidycovid19}`](https://joachim-gassen.github.io/tidycovid19/) package
 
 ```{r}
-df_ecdc <- download_ecdc_covid19_data(cached = TRUE)
+df_ecdc <- download_ecdc_covid19_data(cached = FALSE)
+df_wb   <- download_wbank_data(cached = TRUE)
 ```
 
 ## Process data
@@ -78,7 +81,8 @@ Filter OECD countries
 ```{r}
 df_oecd <- 
   df %>% 
-  filter(iso3c %in% oecd_iso3c) 
+  filter(iso3c %in% oecd_iso3c) %>% 
+  left_join(df_wb)
 ```
 
 ## A function that estimates $R_t$
@@ -182,7 +186,7 @@ df_R_q <-
   )
 ```
 
-## Plot results
+## Plot $R_t$
 
 Store information regarding the latest values (will be used in the plot to annotate the lines.)
 
@@ -195,7 +199,7 @@ last_oecd   <- last_obs %>% pull(q50) %>% unname() + 0.1
 last_israel <- last_obs %>% pull(isr_rep_num) %>% unname() + 0.1
 ```
 
-plot the figure
+Plot $R_t$
 
 ```{r}
 df_R_q %>% 
@@ -222,19 +226,48 @@ df_R_q %>%
   labs(
     y = expression("R"[t]),
     x = "",
-    title = "Effective Reproduction Number",
+    title = "Daily Effective Reproduction Number",
     subtitle = "Israel, OECD median and 10-90 percentile range",
     color = "",
     lty = "",
     caption = "Data source: ECDC."
   ) +
-  scale_x_date(labels = date_format("%d/%m")) +
+  scale_x_date(labels = date_format("%Y-%m-%d")) +
   theme(
     legend.position="top",
     plot.caption = element_text(hjust = 0)
   ) +
-  ylim(0,4) +
+  ylim(0,2.5) +
   theme_ipsum()
+```
+
+## Plot new cases
+
+Plot daily new cases
+```{r}
+df_oecd %>% 
+  filter(population >= 1e6) %>% 
+  mutate(
+    dcases = rollmean(cases, 7, na.pad=TRUE, align="right"),
+    dcases_pc = dcases / population * 1e6
+  ) %>% 
+    filter(
+    date >= ymd("2020-03-01")
+  ) %>% 
+  ggplot(aes(date, dcases, color = iso3c)) +
+  geom_line(size = 0.6) +
+  gghighlight(iso3c %in% c("ISR")) +
+  theme_ipsum()+
+  scale_colour_viridis_d() +
+  scale_y_log10() +
+  scale_x_date(labels = date_format("%Y-%m-%d")) +
+  labs(
+    title = "Daily new cases",
+    subtitle = "Israel (dark) and OECD countries (grey)",
+    y = "Daily new cases per 1 million\n(7-day moving average)",
+    x = "",
+    caption = "Notes: The sample is limited to countries with a population exceeding 1 million.\nData source: ECDC."
+  )
 ```
 
 ## Save to File
