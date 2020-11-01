@@ -266,7 +266,7 @@ df_R_q %>%
     subtitle = "Israel vs. OECD median and interquartile range",
     color = "",
     lty = "",
-    caption = "Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nSource: Johns Hopkins University Center for Systems Science and Engineering, Bank of Israel calculation."
+    caption = "Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nSource: Johns Hopkins University Center for Systems Science and Engineering."
   ) +
   scale_x_date(labels = date_format("%Y-%m-%d")) +
   theme_ipsum() +
@@ -302,7 +302,7 @@ df_oecd %>%
     subtitle = "Israel (dark) and OECD countries (grey)",
     y = "Daily new cases per 1 million\n(7-day moving average)",
     x = "",
-    caption = "Notes: The sample is limited to countries with a population exceeding 1 million.\nData source: Johns Hopkins University Center for Systems Science and Engineering"
+    caption = "Notes: The sample is limited to countries with a population exceeding 1 million.\nData source: Johns Hopkins University Center for Systems Science and Engineering."
   )
 ```
 
