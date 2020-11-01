@@ -36,13 +36,21 @@ library(zoo)         # for rolling means
 library(gghighlight) # for highlighting plots
 ```
 
+## Set parameters
+```{r}
+window <- 7 # smoothing window
+
+```
+
+
+
 ## Read data
 
-Download ECDC case data using the [`{tidycovid19}`](https://joachim-gassen.github.io/tidycovid19/) package
+Download Johns Hopkins University data using the [`{tidycovid19}`](https://joachim-gassen.github.io/tidycovid19/) package
 
 ```{r}
-df_ecdc <- download_ecdc_covid19_data(cached = FALSE)
-df_wb   <- download_wbank_data(cached = TRUE)
+df_jhu <- download_jhu_csse_covid19_data(cached = FALSE)
+df_wb  <- download_wbank_data(cached = TRUE)
 ```
 
 ## Process data
@@ -51,22 +59,20 @@ Filter new cases for each country
 
 ```{r}
 df <- 
-  df_ecdc %>% 
-  mutate(
-    date = ymd(date)
-  ) %>% 
+  df_jhu %>% 
+  mutate(cases = confirmed - lag(confirmed, 1)) %>% 
   select(iso3c, date, cases)
 ```
 
 ## OECD country names list
 
-Names of OECD countries
+A list with names of OECD countries
 
 ```{r}
 oecd_names <- c("Israel", "Austria", "Belgium", "Czech Republic", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Luxembourg", "Netherlands", "Norway", "Poland", "Portugal", "Slovak Republic", "Slovenia", "Spain", "Sweden", "Switzerland", "United Kingdom",  "Canada", "Chile", "Mexico", "United States", "Australia", "Japan", "Korea", "New Zealand", "Turkey")
 ```
 
-Turn names to iso3c codes using the [`{countrycode}`](https://cran.r-project.org/web/packages/countrycode/countrycode.pdf) package
+Transform country names to iso3c codes using the [`{countrycode}`](https://cran.r-project.org/web/packages/countrycode/countrycode.pdf) package
 
 ```{r}
 oecd_iso3c <- 
@@ -85,17 +91,33 @@ df_oecd <-
   left_join(df_wb)
 ```
 
+
+## Set smoothing window size
+```{r}
+obs     <- nrow(df_oecd %>% filter(iso3c == "ISR", date >= ymd("2020-03-15")))
+t_start <- seq(2, obs - window + 1) 
+t_end   <- t_start + window - 1 
+```
+
+
 ## A function that estimates $R_t$
 
-We now write a function that estimates $R_t$ using the [`{EpiEstim}`](https://cran.r-project.org/web/packages/EpiEstim/index.html) package
+We now write a simple function that extracts $R_t$ for a given country using the [`{EpiEstim}`](https://cran.r-project.org/web/packages/EpiEstim/index.html) package
 ```{r}
-estimate_r <- function(incid, output) {
+extract_R <- function(incid, output, t_start, t_end) {
   
   model <- 
     estimate_R(
       incid = incid, 
       method = "parametric_si",
-      config = make_config(list(mean_si = 4.5, std_si = 3.5))
+      config = make_config(
+        list(
+          mean_si = 4.5,
+          std_si = 3.5,
+          t_start = t_start,
+          t_end = t_end
+        )
+      )
     )
   
   rep_num <- model$R[[3]]
@@ -124,7 +146,7 @@ for (i in oecd_iso3c){
     rename(dates = date, I = cases)
 
   tryCatch(
-  output <- estimate_r(incid, output),
+  output <- extract_R(incid, output, t_start, t_end),
   error = function(e) e
   )
 
@@ -148,7 +170,14 @@ model <-
   estimate_R(
     incid = incid, 
     method = "parametric_si",
-    config = make_config(list(mean_si = 4.5, std_si = 3.5))
+    config = make_config(
+        list(
+          mean_si = 4.5,
+          std_si = 3.5,
+          t_start = t_start,
+          t_end = t_end
+        )
+      )
   )
   
 isr_rep_num <- 
@@ -175,14 +204,14 @@ df_R_q <-
   df_R %>% 
   rowwise() %>% 
   mutate(
-    q50 = quantile((c_across(rep_num:V29)), probs = 0.50),
-    q90 = quantile((c_across(rep_num:V29)), probs = 0.90),
-    q10 = quantile((c_across(rep_num:V29)), probs = 0.10)
+    q50    = quantile((c_across(rep_num:V29)), probs = 0.50),
+    q_up   = quantile((c_across(rep_num:V29)), probs = 0.75),
+    q_down = quantile((c_across(rep_num:V29)), probs = 0.25)
   ) %>%
   select(isr_rep_num, starts_with("q")) %>% 
   ungroup() %>% 
   mutate(
-    date = seq(from = ymd("2020-03-23"), by = "1 day", length.out = dim(output)[[1]])
+    date = seq(from = ymd("2020-03-12"), by = "1 day", length.out = dim(output)[[1]])
   )
 ```
 
@@ -194,16 +223,22 @@ Store information regarding the latest values (will be used in the plot to annot
 last_obs <- df_R_q %>% 
   slice(dim(output)[[1]])
 
-last_date   <- last_obs %>% pull(date) + days(15)
-last_oecd   <- last_obs %>% pull(q50) %>% unname() + 0.1
-last_israel <- last_obs %>% pull(isr_rep_num) %>% unname() + 0.1
+last_date   <- last_obs %>% pull(date)
+last_oecd   <- last_obs %>% pull(q50) %>% round(2) %>% unname()
+last_israel <- last_obs %>% pull(isr_rep_num) %>% round(2) %>% unname()
+
+label_israel <- paste0("Israel\n", last_israel)
+label_oecd   <- paste0("OECD\n", last_oecd)
 ```
+
 
 Plot $R_t$
 
 ```{r}
 df_R_q %>% 
-  filter(date >= ymd("2020-03-15")) %>% 
+  filter(
+    date >= ymd("2020-08-01")
+  ) %>% 
   ggplot(aes(x = date, y = q50)) +
   geom_line(
     aes(x = date, y = q50, color = "OECD median"),
@@ -216,29 +251,30 @@ df_R_q %>%
     size = 1,
   ) +
   geom_ribbon(
-    aes(ymin = q10, ymax = q90),
+    aes(ymin = q_down, ymax = q_up),
     fill = "#6DCD59",
-    alpha = 0.2
+    alpha = 0.4
   ) +
-  geom_hline(aes(yintercept = 1), color = "black", linetype = 3, size = 0.5) +
-  annotate("text", x = last_date, y = last_oecd, label = "OECD", color = "#6DCD59") +
-  annotate("text", x = last_date, y = last_israel, label = "Israel", color = "#3E4A89") +
+  geom_hline(aes(yintercept = 1), color = "black", size = 0.5) +
+  annotate("text", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
+  annotate("text", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
+  annotate("rect", xmin = last_date, xmax = last_date + days(10), ymin = -Inf, ymax = +Inf, alpha = 0.3) +
   labs(
     y = expression("R"[t]),
     x = "",
     title = "Daily Effective Reproduction Number",
-    subtitle = "Israel, OECD median and 10-90 percentile range",
+    subtitle = "Israel vs. OECD median and interquartile range",
     color = "",
     lty = "",
-    caption = "Data source: ECDC."
+    caption = "Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nSource: Johns Hopkins University Center for Systems Science and Engineering, Bank of Israel calculation."
   ) +
   scale_x_date(labels = date_format("%Y-%m-%d")) +
+  theme_ipsum() +
   theme(
     legend.position="top",
     plot.caption = element_text(hjust = 0)
   ) +
-  ylim(0,2.5) +
-  theme_ipsum()
+  ylim(0.5,1.5) 
 ```
 
 ## Plot new cases
@@ -246,17 +282,17 @@ df_R_q %>%
 Plot daily new cases
 ```{r}
 df_oecd %>% 
-  filter(population >= 1e6) %>% 
+  filter(
+    population >= 1e6,
+    date >= ymd("2020-03-01")
+  ) %>% 
   mutate(
     dcases = rollmean(cases, 7, na.pad=TRUE, align="right"),
     dcases_pc = dcases / population * 1e6
-  ) %>% 
-    filter(
-    date >= ymd("2020-03-01")
-  ) %>% 
+  ) %>%
   ggplot(aes(date, dcases, color = iso3c)) +
   geom_line(size = 0.6) +
-  gghighlight(iso3c %in% c("ISR")) +
+  gghighlight(iso3c %in% c("ISR", "USA", "DEU")) +
   theme_ipsum()+
   scale_colour_viridis_d() +
   scale_y_log10() +
@@ -266,7 +302,7 @@ df_oecd %>%
     subtitle = "Israel (dark) and OECD countries (grey)",
     y = "Daily new cases per 1 million\n(7-day moving average)",
     x = "",
-    caption = "Notes: The sample is limited to countries with a population exceeding 1 million.\nData source: ECDC."
+    caption = "Notes: The sample is limited to countries with a population exceeding 1 million.\nData source: Johns Hopkins University Center for Systems Science and Engineering"
   )
 ```
 
