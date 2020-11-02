@@ -38,10 +38,18 @@ library(gghighlight) # for highlighting plots
 
 ## Set parameters
 ```{r}
-window <- 7 # smoothing window
-
+window <- 7 # set smoothing window (days) for the EpiEstim procedure
 ```
 
+## Important dates
+```{r}
+events <- 
+  tribble(
+    ~date, ~event,
+    ymd("2020-09-18"), "2nd lockdown start",
+    ymd("2020-10-18"), "Exit phase 1"
+  )
+```
 
 
 ## Read data
@@ -49,13 +57,13 @@ window <- 7 # smoothing window
 Download Johns Hopkins University data using the [`{tidycovid19}`](https://joachim-gassen.github.io/tidycovid19/) package
 
 ```{r}
-df_jhu <- download_jhu_csse_covid19_data(cached = FALSE)
-df_wb  <- download_wbank_data(cached = TRUE)
+df_jhu <- download_jhu_csse_covid19_data(cached = FALSE) # JHU data
+df_wb  <- download_wbank_data(cached = TRUE) # world bank data
 ```
 
 ## Process data
 
-Filter new cases for each country
+Generate new cases for each country
 
 ```{r}
 df <- 
@@ -69,7 +77,9 @@ df <-
 A list with names of OECD countries
 
 ```{r}
-oecd_names <- c("Israel", "Austria", "Belgium", "Czech Republic", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Luxembourg", "Netherlands", "Norway", "Poland", "Portugal", "Slovak Republic", "Slovenia", "Spain", "Sweden", "Switzerland", "United Kingdom",  "Canada", "Chile", "Mexico", "United States", "Australia", "Japan", "Korea", "New Zealand", "Turkey")
+oecd_names <- c(
+  "Israel", "Austria", "Belgium", "Czech Republic", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Luxembourg", "Netherlands", "Norway", "Poland", "Portugal", "Slovak Republic", "Slovenia", "Spain", "Sweden", "Switzerland", "United Kingdom",  "Canada", "Chile", "Mexico", "United States", "Australia", "Japan", "Korea", "New Zealand", "Turkey"
+)
 ```
 
 Transform country names to iso3c codes using the [`{countrycode}`](https://cran.r-project.org/web/packages/countrycode/countrycode.pdf) package
@@ -256,9 +266,11 @@ df_R_q %>%
     alpha = 0.4
   ) +
   geom_hline(aes(yintercept = 1), color = "black", size = 0.5) +
-  annotate("text", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
-  annotate("text", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
+  annotate("text", x = last_date + days(5), y = last_oecd + 0.15, label = label_oecd, color = "#6DCD59", size = 3.5) +
+  annotate("text", x = last_date + days(5), y = last_israel - 0.15, label = label_israel, color = "#3E4A89", size = 3.5) +
   annotate("rect", xmin = last_date, xmax = last_date + days(10), ymin = -Inf, ymax = +Inf, alpha = 0.3) +
+  geom_vline(data = events, aes(xintercept = date), linetype = 2) +
+  geom_text(data = events, aes(x=date, y=0.5, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
   labs(
     y = expression("R"[t]),
     x = "",
