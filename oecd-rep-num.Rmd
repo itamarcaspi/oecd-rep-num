@@ -47,7 +47,8 @@ events <-
   tribble(
     ~date, ~event,
     ymd("2020-09-18"), "2nd lockdown start",
-    ymd("2020-10-18"), "Exit phase 1"
+    ymd("2020-10-18"), "Exit phase 1",
+    ymd("2020-11-01"), "Exit phase 2",
   )
 ```
 
@@ -266,8 +267,8 @@ df_R_q %>%
     alpha = 0.4
   ) +
   geom_hline(aes(yintercept = 1), color = "black", size = 0.5) +
-  annotate("text", x = last_date + days(5), y = last_oecd + 0.15, label = label_oecd, color = "#6DCD59", size = 3.5) +
-  annotate("text", x = last_date + days(5), y = last_israel - 0.15, label = label_israel, color = "#3E4A89", size = 3.5) +
+  annotate("text", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
+  annotate("text", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
   annotate("rect", xmin = last_date, xmax = last_date + days(10), ymin = -Inf, ymax = +Inf, alpha = 0.3) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0.5, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
