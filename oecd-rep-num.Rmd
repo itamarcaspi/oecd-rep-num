@@ -12,7 +12,7 @@ output:
     toc_depth: 4
     toc_float: yes
 abstract: |
-  The following code estimates the effective reproduction number $R_t$ for Israel and compares it to the distribution of other OECD countries' $R_t$ over time.
+  The following code estimates the effective reproduction number $R_t$ for Israel and compares it to the distribution of other OECD countries' $R_t$.
 ---
 
 ```{r setup, include=FALSE}
@@ -34,19 +34,22 @@ library(scales)      # for dates on the x-axis
 library(hrbrthemes)  # for a nice figure theme
 library(zoo)         # for rolling means
 library(gghighlight) # for highlighting plots
+library(patchwork)   # for combining separate ggplots
 ```
 
 ## Set parameters
 ```{r}
-window <- 7 # set smoothing window (days) for the EpiEstim procedure
+window  <- 7    # smoothing window (days)
+mean_si <- 4.5  # mean of the serial interval
+std_si  <- 3.5  # standard deviation of the serial interval
 ```
 
-## Important dates
+## Lockdown dates
 ```{r}
 events <- 
   tribble(
     ~date, ~event,
-    ymd("2020-09-18"), "2nd lockdown start",
+    ymd("2020-09-18"), "Lockdown start",
     ymd("2020-10-18"), "Exit phase 1",
     ymd("2020-11-01"), "Exit phase 2",
   )
@@ -58,7 +61,7 @@ events <-
 Download Johns Hopkins University data using the [`{tidycovid19}`](https://joachim-gassen.github.io/tidycovid19/) package
 
 ```{r}
-df_jhu <- download_jhu_csse_covid19_data(cached = FALSE) # JHU data
+df_jhu <- download_jhu_csse_covid19_data(cached = TRUE) # JHU data
 df_wb  <- download_wbank_data(cached = TRUE) # world bank data
 ```
 
@@ -73,13 +76,21 @@ df <-
   select(iso3c, date, cases)
 ```
 
-## OECD country names list
+## Filter OECD countries
 
 A list with names of OECD countries
 
 ```{r}
 oecd_names <- c(
-  "Israel", "Austria", "Belgium", "Czech Republic", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Luxembourg", "Netherlands", "Norway", "Poland", "Portugal", "Slovak Republic", "Slovenia", "Spain", "Sweden", "Switzerland", "United Kingdom",  "Canada", "Chile", "Mexico", "United States", "Australia", "Japan", "Korea", "New Zealand", "Turkey"
+  "Israel", "Austria", "Belgium", "Czech Republic",
+  "Denmark", "Estonia", "Finland", "France",
+  "Germany", "Greece", "Hungary", "Iceland",
+  "Ireland", "Italy", "Latvia", "Luxembourg",
+  "Netherlands", "Norway", "Poland", "Portugal",
+  "Slovak Republic", "Slovenia", "Spain",
+  "Sweden", "Switzerland", "United Kingdom",  "Canada",
+  "Chile", "Mexico", "United States", "Australia",
+  "Japan", "Korea", "New Zealand", "Turkey"
 )
 ```
 
@@ -115,7 +126,7 @@ t_end   <- t_start + window - 1
 
 We now write a simple function that extracts $R_t$ for a given country using the [`{EpiEstim}`](https://cran.r-project.org/web/packages/EpiEstim/index.html) package
 ```{r}
-extract_R <- function(incid, output, t_start, t_end) {
+extract_R <- function(incid, output, t_start, t_end, mean_si, std_si) {
   
   model <- 
     estimate_R(
@@ -123,8 +134,8 @@ extract_R <- function(incid, output, t_start, t_end) {
       method = "parametric_si",
       config = make_config(
         list(
-          mean_si = 4.5,
-          std_si = 3.5,
+          mean_si = mean_si,
+          std_si = std_si,
           t_start = t_start,
           t_end = t_end
         )
@@ -157,7 +168,7 @@ for (i in oecd_iso3c){
     rename(dates = date, I = cases)
 
   tryCatch(
-  output <- extract_R(incid, output, t_start, t_end),
+  output <- extract_R(incid, output, t_start, t_end, mean_si, std_si),
   error = function(e) e
   )
 
@@ -183,8 +194,8 @@ model <-
     method = "parametric_si",
     config = make_config(
         list(
-          mean_si = 4.5,
-          std_si = 3.5,
+          mean_si = mean_si,
+          std_si = std_si,
           t_start = t_start,
           t_end = t_end
         )
@@ -201,6 +212,8 @@ output <-
 ```
 
 ## Calculate median and interquartile range
+
+### R
 
 Dataframe to tibble
 ```{r}
@@ -226,10 +239,42 @@ df_R_q <-
   )
 ```
 
-## Plot $R_t$
+### Cases
+
+Generate 7-day rolling mean of daily cases
+```{r}
+df_oecd_cases <- 
+  df_oecd %>% 
+  filter(
+    population >= 1e6,
+    date >= ymd("2020-03-01")
+  ) %>% 
+  mutate(
+    dcases = rollmean(cases, 7, na.pad=TRUE, align="right"),
+    dcases_pc = dcases / population * 1e6
+  ) %>%
+  select(iso3c, date, dcases_pc)
+```
+
+Calculate the median and 10-90 quantiles, by rows (i.e., dates)
+```{r}
+df_oecd_cases_q <- 
+  df_oecd_cases %>% 
+  pivot_wider(date, names_from = "iso3c", values_from = "dcases_pc") %>% 
+  rowwise() %>% 
+  mutate(
+    q50    = quantile((c_across(AUS:USA)), probs = 0.50, na.rm = TRUE),
+    q_up   = quantile((c_across(AUS:USA)), probs = 0.75, na.rm = TRUE),
+    q_down = quantile((c_across(AUS:USA)), probs = 0.25, na.rm = TRUE)
+  ) %>%
+  select(date, ISR, starts_with("q")) %>% 
+  ungroup()
+```
+
+
+## Plot of $R_t$
 
 Store information regarding the latest values (will be used in the plot to annotate the lines.)
-
 ```{r}
 last_obs <- df_R_q %>% 
   slice(dim(output)[[1]])
@@ -242,11 +287,9 @@ label_israel <- paste0("Israel\n", last_israel)
 label_oecd   <- paste0("OECD\n", last_oecd)
 ```
 
-
 Plot $R_t$
-
 ```{r}
-df_R_q %>% 
+p_R <- df_R_q %>% 
   filter(
     date >= ymd("2020-08-01")
   ) %>% 
@@ -288,43 +331,13 @@ df_R_q %>%
     plot.caption = element_text(hjust = 0)
   ) +
   ylim(0.5,1.5) 
+
+p_R
 ```
 
-## Plot new cases
-
-Generate 7-day rolling mean of daily cases
-```{r}
-df_oecd_cases <- 
-  df_oecd %>% 
-  filter(
-    population >= 1e6,
-    date >= ymd("2020-03-01")
-  ) %>% 
-  mutate(
-    dcases = rollmean(cases, 7, na.pad=TRUE, align="right"),
-    dcases_pc = dcases / population * 1e6
-  ) %>%
-  select(iso3c, date, dcases_pc)
-```
-
-Calculate the median and 10-90 quantiles, by rows (i.e., dates)
-
-```{r}
-df_oecd_cases_q <- 
-  df_oecd_cases %>% 
-  pivot_wider(date, names_from = "iso3c", values_from = "dcases_pc") %>% 
-  rowwise() %>% 
-  mutate(
-    q50    = quantile((c_across(AUS:USA)), probs = 0.50, na.rm = TRUE),
-    q_up   = quantile((c_across(AUS:USA)), probs = 0.75, na.rm = TRUE),
-    q_down = quantile((c_across(AUS:USA)), probs = 0.25, na.rm = TRUE)
-  ) %>%
-  select(date, ISR, starts_with("q")) %>% 
-  ungroup()
-```
+## Plot of new cases
 
 Store information regarding the latest values (will be used in the plot to annotate the lines.)
-
 ```{r}
 last_obs <- df_oecd_cases_q %>% 
   slice(dim(df_oecd_cases_q)[[1]])
@@ -337,10 +350,9 @@ label_israel <- paste0("Israel\n", last_israel)
 label_oecd   <- paste0("OECD\n", last_oecd)
 ```
 
-Plot figure
-
+Plot daily cases
 ```{r}
-df_oecd_cases_q %>% 
+p_cases <- df_oecd_cases_q %>% 
   filter(
     date >= ymd("2020-08-01")
   ) %>% 
@@ -377,6 +389,13 @@ df_oecd_cases_q %>%
     legend.position="top",
     plot.caption = element_text(hjust = 0)
   )
+
+p_cases
+```
+
+## Plot both figures
+```{r, eval = FALSE}
+p_cases + p_R
 ```
 
 
