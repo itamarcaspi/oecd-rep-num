@@ -200,7 +200,7 @@ output <-
   cbind(isr_rep_num, output)
 ```
 
-## Calculate median and percentiles
+## Calculate median and interquartile range
 
 Dataframe to tibble
 ```{r}
@@ -279,7 +279,7 @@ df_R_q %>%
     subtitle = "Israel vs. OECD median and interquartile range",
     color = "",
     lty = "",
-    caption = "Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nSource: Johns Hopkins University Center for Systems Science and Engineering."
+    caption = "Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nData source: Johns Hopkins University Center for Systems Science and Engineering."
   ) +
   scale_x_date(labels = date_format("%Y-%m-%d")) +
   theme_ipsum() +
@@ -292,9 +292,10 @@ df_R_q %>%
 
 ## Plot new cases
 
-Plot daily new cases
+Generate 7-day rolling mean of daily cases
 ```{r}
-df_oecd %>% 
+df_oecd_cases <- 
+  df_oecd %>% 
   filter(
     population >= 1e6,
     date >= ymd("2020-03-01")
@@ -303,25 +304,86 @@ df_oecd %>%
     dcases = rollmean(cases, 7, na.pad=TRUE, align="right"),
     dcases_pc = dcases / population * 1e6
   ) %>%
-  ggplot(aes(date, dcases, color = iso3c)) +
-  geom_line(size = 0.6) +
-  gghighlight(iso3c %in% c("ISR", "USA", "DEU")) +
-  theme_ipsum()+
-  scale_colour_viridis_d() +
-  scale_y_log10() +
-  scale_x_date(labels = date_format("%Y-%m-%d")) +
+  select(iso3c, date, dcases_pc)
+```
+
+Calculate the median and 10-90 quantiles, by rows (i.e., dates)
+
+```{r}
+df_oecd_cases_q <- 
+  df_oecd_cases %>% 
+  pivot_wider(date, names_from = "iso3c", values_from = "dcases_pc") %>% 
+  rowwise() %>% 
+  mutate(
+    q50    = quantile((c_across(AUS:USA)), probs = 0.50, na.rm = TRUE),
+    q_up   = quantile((c_across(AUS:USA)), probs = 0.75, na.rm = TRUE),
+    q_down = quantile((c_across(AUS:USA)), probs = 0.25, na.rm = TRUE)
+  ) %>%
+  select(date, ISR, starts_with("q")) %>% 
+  ungroup()
+```
+
+Store information regarding the latest values (will be used in the plot to annotate the lines.)
+
+```{r}
+last_obs <- df_oecd_cases_q %>% 
+  slice(dim(df_oecd_cases_q)[[1]])
+
+last_date   <- last_obs %>% pull(date)
+last_oecd   <- last_obs %>% pull(q50) %>% round(0) %>% unname()
+last_israel <- last_obs %>% pull(ISR) %>% round(0) %>% unname()
+
+label_israel <- paste0("Israel\n", last_israel)
+label_oecd   <- paste0("OECD\n", last_oecd)
+```
+
+Plot figure
+
+```{r}
+df_oecd_cases_q %>% 
+  filter(
+    date >= ymd("2020-08-01")
+  ) %>% 
+  ggplot(aes(x = date, y = q50)) +
+  geom_line(
+    aes(x = date, y = q50, color = "OECD median"),
+    size = 1,
+    color = "#6DCD59"
+  ) +
+  geom_line(
+    aes(x = date, y = ISR),
+    color = "#3E4A89",
+    size = 1,
+  ) +
+  geom_ribbon(
+    aes(ymin = q_down, ymax = q_up),
+    fill = "#6DCD59",
+    alpha = 0.4
+  ) +
+  annotate("text", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
+  annotate("text", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
+  geom_vline(data = events, aes(xintercept = date), linetype = 2) +
+  geom_text(data = events, aes(x=date, y=0.5, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
   labs(
     title = "Daily new cases",
-    subtitle = "Israel (dark) and OECD countries (grey)",
+    subtitle = "Israel vs. OECD median and interquartile range",
     y = "Daily new cases per 1 million\n(7-day moving average)",
     x = "",
     caption = "Notes: The sample is limited to countries with a population exceeding 1 million.\nData source: Johns Hopkins University Center for Systems Science and Engineering."
+  ) +
+  scale_x_date(labels = date_format("%Y-%m-%d")) +
+  theme_ipsum() +
+  theme(
+    legend.position="top",
+    plot.caption = element_text(hjust = 0)
   )
 ```
+
 
 ## Save to File
 
 Save data to a csv file.
 ```{r}
 write_csv(df_R_q, path = "output/oecd-rep-num.csv")
+write_csv(df_oecd_cases_q, path = "output/oecd-cases.csv")
 ```
