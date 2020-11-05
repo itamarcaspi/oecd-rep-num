@@ -12,7 +12,7 @@ output:
     toc_depth: 4
     toc_float: yes
 abstract: |
-  The following code estimates the effective reproduction number $R_t$ for Israel and compares it to the distribution of other OECD countries' $R_t$.
+  The following code estimates the effective reproduction number $R_t$ for Israel and compares it to the distribution of other OECD countries' $R_t$
 ---
 
 ```{r setup, include=FALSE}
@@ -38,6 +38,7 @@ library(patchwork)   # for combining separate ggplots
 ```
 
 ## Set parameters
+
 ```{r}
 window  <- 7    # smoothing window (days)
 mean_si <- 4.5  # mean of the serial interval
@@ -45,6 +46,7 @@ std_si  <- 3.5  # standard deviation of the serial interval
 ```
 
 ## Lockdown dates
+
 ```{r}
 events <- 
   tribble(
@@ -55,14 +57,14 @@ events <-
   )
 ```
 
-
 ## Read data
 
 Download Johns Hopkins University data using the [`{tidycovid19}`](https://joachim-gassen.github.io/tidycovid19/) package
 
 ```{r}
-df_jhu <- download_jhu_csse_covid19_data(cached = TRUE) # JHU data
-df_wb  <- download_wbank_data(cached = TRUE) # world bank data
+df_jhu  <- download_jhu_csse_covid19_data(cached = FALSE) # JHU data
+df_owid <- download_owid_testing_data(cached = TRUE) # OWID data
+df_wb   <- download_wbank_data(cached = TRUE) # world bank data
 ```
 
 ## Process data
@@ -74,6 +76,19 @@ df <-
   df_jhu %>% 
   mutate(cases = confirmed - lag(confirmed, 1)) %>% 
   select(iso3c, date, cases)
+```
+
+```{r}
+df_tests <- df_owid %>% 
+  mutate(tests = total_tests - lag(total_tests, 1)) %>% 
+  select(iso3c, date, tests)
+```
+
+```{r}
+df <- 
+  df %>% 
+  left_join(df_tests) %>% 
+  mutate(positive_rate = (cases / tests) * 100)
 ```
 
 ## Filter OECD countries
@@ -106,6 +121,7 @@ oecd_iso3c <-
 ```
 
 Filter OECD countries
+
 ```{r}
 df_oecd <- 
   df %>% 
@@ -113,18 +129,18 @@ df_oecd <-
   left_join(df_wb)
 ```
 
-
 ## Set smoothing window size
+
 ```{r}
 obs     <- nrow(df_oecd %>% filter(iso3c == "ISR", date >= ymd("2020-03-15")))
 t_start <- seq(2, obs - window + 1) 
 t_end   <- t_start + window - 1 
 ```
 
-
 ## A function that estimates $R_t$
 
 We now write a simple function that extracts $R_t$ for a given country using the [`{EpiEstim}`](https://cran.r-project.org/web/packages/EpiEstim/index.html) package
+
 ```{r}
 extract_R <- function(incid, output, t_start, t_end, mean_si, std_si) {
   
@@ -153,6 +169,7 @@ extract_R <- function(incid, output, t_start, t_end, mean_si, std_si) {
 ## Estimate $R_t$ for OECD countries
 
 Estimate $R_t$ for each OECD country, and ignore those for which the function throws an error (probably due to data issues).
+
 ```{r}
 output <- c()
 
@@ -178,6 +195,7 @@ for (i in oecd_iso3c){
 ## Estimate $R_t$ for Israel
 
 Now we estimate Israel $R_t$ and add it to the output table.
+
 ```{r}
 incid <- 
   df_oecd %>%
@@ -213,9 +231,10 @@ output <-
 
 ## Calculate median and interquartile range
 
-### R
+### $R_t$
 
 Dataframe to tibble
+
 ```{r}
 df_R <- 
   output %>% 
@@ -223,6 +242,7 @@ df_R <-
 ```
 
 Calculate the median and 10-90 quantiles, by rows (i.e., dates)
+
 ```{r}
 df_R_q <- 
   df_R %>% 
@@ -242,6 +262,7 @@ df_R_q <-
 ### Cases
 
 Generate 7-day rolling mean of daily cases
+
 ```{r}
 df_oecd_cases <- 
   df_oecd %>% 
@@ -250,17 +271,18 @@ df_oecd_cases <-
     date >= ymd("2020-03-01")
   ) %>% 
   mutate(
-    dcases = rollmean(cases, 7, na.pad=TRUE, align="right"),
-    dcases_pc = dcases / population * 1e6
+    cases_ma = rollmean(cases, 7, na.pad=TRUE, align="right"),
+    cases_ma_pc = cases_ma / population * 1e6
   ) %>%
-  select(iso3c, date, dcases_pc)
+  select(iso3c, date, cases_ma_pc)
 ```
 
 Calculate the median and 10-90 quantiles, by rows (i.e., dates)
+
 ```{r}
 df_oecd_cases_q <- 
   df_oecd_cases %>% 
-  pivot_wider(date, names_from = "iso3c", values_from = "dcases_pc") %>% 
+  pivot_wider(date, names_from = "iso3c", values_from = "cases_ma_pc") %>% 
   rowwise() %>% 
   mutate(
     q50    = quantile((c_across(AUS:USA)), probs = 0.50, na.rm = TRUE),
@@ -271,10 +293,40 @@ df_oecd_cases_q <-
   ungroup()
 ```
 
+### Tests
 
-## Plot of $R_t$
+```{r}
+df_oecd_tests <- 
+  df_oecd %>% 
+  filter(
+    population >= 1e6,
+    date >= ymd("2020-03-01")
+  ) %>% 
+  mutate(
+    positive_rate_ma = rollmean(positive_rate, 7, na.pad=TRUE, align="right"),
+  ) %>%
+  select(iso3c, date, positive_rate_ma)
+```
+
+```{r}
+df_oecd_tests_q <- 
+  df_oecd_tests %>% 
+  pivot_wider(date, names_from = "iso3c", values_from = "positive_rate_ma") %>% 
+  rowwise() %>% 
+  mutate(
+    q50    = quantile((c_across(AUS:USA)), probs = 0.50, na.rm = TRUE),
+    q_up   = quantile((c_across(AUS:USA)), probs = 0.75, na.rm = TRUE),
+    q_down = quantile((c_across(AUS:USA)), probs = 0.25, na.rm = TRUE)
+  ) %>%
+  select(date, ISR, starts_with("q")) %>% 
+  ungroup() %>% 
+  drop_na()
+```
+
+## Plot $R_t$
 
 Store information regarding the latest values (will be used in the plot to annotate the lines.)
+
 ```{r}
 last_obs <- df_R_q %>% 
   slice(dim(output)[[1]])
@@ -288,6 +340,7 @@ label_oecd   <- paste0("OECD\n", last_oecd)
 ```
 
 Plot $R_t$
+
 ```{r}
 p_R <- df_R_q %>% 
   filter(
@@ -318,7 +371,7 @@ p_R <- df_R_q %>%
   labs(
     y = expression("R"[t]),
     x = "",
-    title = "Daily Effective Reproduction Number",
+    title = "Effective Reproduction Number",
     subtitle = "Israel vs. OECD median and interquartile range",
     color = "",
     lty = "",
@@ -335,9 +388,10 @@ p_R <- df_R_q %>%
 p_R
 ```
 
-## Plot of new cases
+## Plot new cases
 
 Store information regarding the latest values (will be used in the plot to annotate the lines.)
+
 ```{r}
 last_obs <- df_oecd_cases_q %>% 
   slice(dim(df_oecd_cases_q)[[1]])
@@ -351,6 +405,7 @@ label_oecd   <- paste0("OECD\n", last_oecd)
 ```
 
 Plot daily cases
+
 ```{r}
 p_cases <- df_oecd_cases_q %>% 
   filter(
@@ -372,16 +427,16 @@ p_cases <- df_oecd_cases_q %>%
     fill = "#6DCD59",
     alpha = 0.4
   ) +
-  annotate("text", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
-  annotate("text", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
+  # annotate("text", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
+  # annotate("text", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
-  geom_text(data = events, aes(x=date, y=0.5, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
+  geom_text(data = events, aes(x=date, y=0, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
   labs(
-    title = "Daily new cases",
+    title = "New cases",
     subtitle = "Israel vs. OECD median and interquartile range",
-    y = "Daily new cases per 1 million\n(7-day moving average)",
+    y = "Cases per 1 million",
     x = "",
-    caption = "Notes: The sample is limited to countries with a population exceeding 1 million.\nData source: Johns Hopkins University Center for Systems Science and Engineering."
+    caption = "Notes: 7-day moving average\nData source: Johns Hopkins University Center for Systems Science and Engineering."
   ) +
   scale_x_date(labels = date_format("%Y-%m-%d")) +
   theme_ipsum() +
@@ -393,16 +448,74 @@ p_cases <- df_oecd_cases_q %>%
 p_cases
 ```
 
-## Plot both figures
-```{r, eval = FALSE}
-p_cases + p_R
+## Plot positivity rate
+
+```{r}
+last_obs <- df_oecd_tests_q %>% 
+  slice(dim(df_oecd_tests_q)[[1]])
+
+last_date   <- last_obs %>% pull(date)
+last_oecd   <- last_obs %>% pull(q50) %>% round(1) %>% unname()
+last_israel <- last_obs %>% pull(ISR) %>% round(1) %>% unname()
+
+label_israel <- paste0("Israel\n", last_israel)
+label_oecd   <- paste0("OECD\n", last_oecd)
 ```
 
+```{r}
+p_tests <- df_oecd_tests_q %>%
+  filter(
+    date >= ymd("2020-08-01")
+  ) %>% 
+  ggplot(aes(x = date, y = q50)) +
+  geom_line(
+    aes(x = date, y = q50, color = "OECD median"),
+    size = 1,
+    color = "#6DCD59"
+  ) +
+  geom_line(
+    aes(x = date, y = ISR),
+    color = "#3E4A89",
+    size = 1,
+  ) +
+  geom_ribbon(
+    aes(ymin = q_down, ymax = q_up),
+    fill = "#6DCD59",
+    alpha = 0.4
+  ) +
+  # annotate("text", x = last_date + days(2), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
+  # annotate("text", x = last_date + days(2), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
+  geom_vline(data = events, aes(xintercept = date), linetype = 2) +
+  geom_text(data = events, aes(x=date, y=0, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
+  labs(
+    title = "Positivity rate",
+    subtitle = "Israel vs. OECD median and interquartile range",
+    y = "Percent",
+    x = "",
+    caption = "Notes: 7-day moving average.\nData source: Our World in Data."
+  ) +
+  scale_x_date(labels = date_format("%Y-%m-%d")) +
+  theme_ipsum() +
+  theme(
+    legend.position="top",
+    plot.caption = element_text(hjust = 0)
+  )
+
+p_tests
+```
+
+## Plot all figures
+
+```{r, eval = FALSE}
+p_R + (p_cases / p_tests)
+```
 
 ## Save to File
 
 Save data to a csv file.
+
 ```{r}
 write_csv(df_R_q, path = "output/oecd-rep-num.csv")
 write_csv(df_oecd_cases_q, path = "output/oecd-cases.csv")
+write_csv(df_oecd_tests_q, path = "output/oecd-test.csv")
 ```
