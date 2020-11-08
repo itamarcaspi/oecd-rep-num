@@ -363,11 +363,11 @@ p_R <- df_R_q %>%
     alpha = 0.4
   ) +
   geom_hline(aes(yintercept = 1), color = "black", size = 0.5) +
-  annotate("text", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
-  annotate("text", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
   annotate("rect", xmin = last_date, xmax = last_date + days(10), ymin = -Inf, ymax = +Inf, alpha = 0.3) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0.5, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
+  annotate("label", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
+  annotate("label", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
   labs(
     y = expression("R"[t]),
     x = "",
@@ -375,7 +375,7 @@ p_R <- df_R_q %>%
     subtitle = "Israel vs. OECD median and interquartile range",
     color = "",
     lty = "",
-    caption = "Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nData source: Johns Hopkins University Center for Systems Science and Engineering."
+    caption = "Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nData: Johns Hopkins University Center for Systems Science and Engineering."
   ) +
   scale_x_date(labels = date_format("%Y-%m-%d")) +
   theme_ipsum() +
@@ -427,8 +427,8 @@ p_cases <- df_oecd_cases_q %>%
     fill = "#6DCD59",
     alpha = 0.4
   ) +
-  # annotate("text", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
-  # annotate("text", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
+  annotate("label", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
+  annotate("label", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
   labs(
@@ -436,7 +436,7 @@ p_cases <- df_oecd_cases_q %>%
     subtitle = "Israel vs. OECD median and interquartile range",
     y = "Cases per 1 million",
     x = "",
-    caption = "Notes: 7-day moving average\nData source: Johns Hopkins University Center for Systems Science and Engineering."
+    caption = "Notes: 7-day moving average\nData: Johns Hopkins University Center for Systems Science and Engineering."
   ) +
   scale_x_date(labels = date_format("%Y-%m-%d")) +
   theme_ipsum() +
@@ -483,16 +483,16 @@ p_tests <- df_oecd_tests_q %>%
     fill = "#6DCD59",
     alpha = 0.4
   ) +
-  # annotate("text", x = last_date + days(2), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
-  # annotate("text", x = last_date + days(2), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
+  annotate("label", x = last_date + days(2), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
+  annotate("label", x = last_date + days(2), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
   labs(
     title = "Positivity rate",
     subtitle = "Israel vs. OECD median and interquartile range",
     y = "Percent",
     x = "",
-    caption = "Notes: 7-day moving average.\nData source: Our World in Data."
+    caption = "Notes: 7-day moving average.\nData: Our World in Data."
   ) +
   scale_x_date(labels = date_format("%Y-%m-%d")) +
   theme_ipsum() +
@@ -507,7 +507,7 @@ p_tests
 ## Plot all figures
 
 ```{r, eval = FALSE}
-p_R + (p_cases / p_tests)
+p_R + p_cases
 ```
 
 ## Save to File
