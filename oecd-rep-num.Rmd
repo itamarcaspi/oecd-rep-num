@@ -323,8 +323,9 @@ df_oecd_tests_q <-
   drop_na()
 ```
 
-## Plot $R_t$
+## Plot
 
+### $R_t$
 Store information regarding the latest values (will be used in the plot to annotate the lines.)
 
 ```{r}
@@ -388,7 +389,7 @@ p_R <- df_R_q %>%
 p_R
 ```
 
-## Plot new cases
+### New cases
 
 Store information regarding the latest values (will be used in the plot to annotate the lines.)
 
@@ -448,7 +449,7 @@ p_cases <- df_oecd_cases_q %>%
 p_cases
 ```
 
-## Plot positivity rate
+### Positivity rate
 
 ```{r}
 last_obs <- df_oecd_tests_q %>% 
@@ -504,8 +505,8 @@ p_tests <- df_oecd_tests_q %>%
 p_tests
 ```
 
-## Plot all figures
 
+plot side $R_t$ and cases by side using `{patchwork}`
 ```{r, eval = FALSE}
 p_R + p_cases
 ```
