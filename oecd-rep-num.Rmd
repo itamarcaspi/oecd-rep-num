@@ -535,3 +535,5 @@ write_csv(df_oecd_tests_q, path = "output/oecd-test.csv")
 ## References
 
 Cori, A., Ferguson, N. M., Fraser, C., & Cauchemez, S. (2013). A new framework and software to estimate time-varying reproduction numbers during epidemics. _American Journal of Epidemiology_, 178(9), 1505-1512.
+
+Gostic, K. M., McGough, L., Baskerville, S. A., Joshi, K., Tedijanto, C., Kahn, R., ... & Meakin, S. (2020). Practical considerations for measuring the effective reproductive number, Rt. _medRxiv_.
