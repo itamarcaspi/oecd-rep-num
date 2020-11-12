@@ -381,7 +381,7 @@ p_R <- df_R_q %>%
     lty = "",
     caption = "Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nData: Johns Hopkins University Center for Systems Science and Engineering."
   ) +
-  scale_x_date(labels = date_format("%Y-%m-%d")) +
+  scale_x_date(labels = date_format("%d-%m")) +
   theme_ipsum() +
   theme(
     legend.position="top",
@@ -442,7 +442,7 @@ p_cases <- df_oecd_cases_q %>%
     x = "",
     caption = "Notes: 7-day moving average\nData: Johns Hopkins University Center for Systems Science and Engineering."
   ) +
-  scale_x_date(labels = date_format("%Y-%m-%d")) +
+  scale_x_date(labels = date_format("%d-%m")) +
   theme_ipsum() +
   theme(
     legend.position="top",
@@ -498,7 +498,7 @@ p_tests <- df_oecd_tests_q %>%
     x = "",
     caption = "Notes: 7-day moving average.\nData: Our World in Data."
   ) +
-  scale_x_date(labels = date_format("%Y-%m-%d")) +
+  scale_x_date(labels = date_format("%d-%m")) +
   theme_ipsum() +
   theme(
     legend.position="top",
@@ -508,12 +508,15 @@ p_tests <- df_oecd_tests_q %>%
 p_tests
 ```
 
-
+### Side by side plot
 plot side $R_t$ and cases by side using `{patchwork}`
 ```{r}
-p <- p_R + p_cases
+p <- p_R + p_cases +
+  plot_annotation(caption = paste0("Timestamp: ", now())) &
+  theme(text = element_text('mono', size = 14))
+
 ggsave(
-  filename = "output/r-cases-oecd.png",
+  filename = "plots/r-cases-oecd.png",
   plot = p,
   scale = 2
 )
