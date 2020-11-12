@@ -508,8 +508,18 @@ p_tests <- df_oecd_tests_q %>%
 p_tests
 ```
 
-### Side by side plot
-plot side $R_t$ and cases by side using `{patchwork}`
+
+## Save output
+
+Save data to a csv file.
+
+```{r}
+write_csv(df_R_q, path = "output/oecd-rep-num.csv")
+write_csv(df_oecd_cases_q, path = "output/oecd-cases.csv")
+write_csv(df_oecd_tests_q, path = "output/oecd-test.csv")
+```
+
+plot side $R_t$ and cases by side using `{patchwork}` and save as `png`.
 ```{r}
 p <- p_R + p_cases +
   plot_annotation(caption = paste0("Timestamp: ", now())) &
@@ -520,16 +530,6 @@ ggsave(
   plot = p,
   scale = 2
 )
-```
-
-## Save to File
-
-Save data to a csv file.
-
-```{r}
-write_csv(df_R_q, path = "output/oecd-rep-num.csv")
-write_csv(df_oecd_cases_q, path = "output/oecd-cases.csv")
-write_csv(df_oecd_tests_q, path = "output/oecd-test.csv")
 ```
 
 ## References
