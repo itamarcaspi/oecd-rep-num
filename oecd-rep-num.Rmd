@@ -43,6 +43,8 @@ library(patchwork)   # for combining separate ggplots
 window  <- 7    # smoothing window (days)
 mean_si <- 4.5  # mean of the serial interval
 std_si  <- 3.5  # standard deviation of the serial interval
+
+plot_start <- ymd("2020-09-01") # start date for all plots
 ```
 
 ## Lockdown dates
@@ -54,6 +56,7 @@ events <-
     ymd("2020-09-18"), "Lockdown start",
     ymd("2020-10-18"), "Exit phase 1",
     ymd("2020-11-01"), "Exit phase 2",
+    ymd("2020-11-08"), "Exit phase 3"
   )
 ```
 
