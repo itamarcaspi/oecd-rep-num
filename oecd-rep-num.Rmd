@@ -348,7 +348,7 @@ Plot $R_t$
 ```{r}
 p_R <- df_R_q %>% 
   filter(
-    date >= ymd("2020-08-01")
+    date >= plot_start
   ) %>% 
   ggplot(aes(x = date, y = q50)) +
   geom_line(
@@ -413,7 +413,7 @@ Plot daily cases
 ```{r}
 p_cases <- df_oecd_cases_q %>% 
   filter(
-    date >= ymd("2020-08-01")
+    date >= plot_start
   ) %>% 
   ggplot(aes(x = date, y = q50)) +
   geom_line(
@@ -469,7 +469,7 @@ label_oecd   <- paste0("OECD\n", last_oecd)
 ```{r}
 p_tests <- df_oecd_tests_q %>%
   filter(
-    date >= ymd("2020-08-01")
+    date >= plot_start
   ) %>% 
   ggplot(aes(x = date, y = q50)) +
   geom_line(
@@ -510,8 +510,13 @@ p_tests
 
 
 plot side $R_t$ and cases by side using `{patchwork}`
-```{r, eval = FALSE}
-p_R + p_cases
+```{r}
+p <- p_R + p_cases
+ggsave(
+  filename = "output/r-cases-oecd.png",
+  plot = p,
+  scale = 2
+)
 ```
 
 ## Save to File
@@ -523,3 +528,7 @@ write_csv(df_R_q, path = "output/oecd-rep-num.csv")
 write_csv(df_oecd_cases_q, path = "output/oecd-cases.csv")
 write_csv(df_oecd_tests_q, path = "output/oecd-test.csv")
 ```
+
+## References
+
+Cori, A., Ferguson, N. M., Fraser, C., & Cauchemez, S. (2013). A new framework and software to estimate time-varying reproduction numbers during epidemics. _American Journal of Epidemiology_, 178(9), 1505-1512.
