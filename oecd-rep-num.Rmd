@@ -42,10 +42,12 @@ library(patchwork)   # for combining separate ggplots
 ## Set parameters
 
 ```{r}
-window  <- 7    # smoothing window (days)
-mean_si <- 4.5  # mean of the serial interval
-std_si  <- 3.5  # standard deviation of the serial interval
+data_source <- 0   # which data source to use (1=JHU 0=ECDC)
+window      <- 7   # smoothing window (days)
+mean_si     <- 4.5 # mean of the serial interval
+std_si      <- 3.5 # standard deviation of the serial interval
 ```
+
 
 ## Lockdown dates
 
@@ -64,7 +66,13 @@ events <-
 
 Download cases, tests, and population data using the [`{tidycovid19}`](https://joachim-gassen.github.io/tidycovid19/) package
 ```{r}
-df_jhu  <- download_jhu_csse_covid19_data(cached = FALSE) # JHU data
+if (data_source == 1) {
+  df_jhu  <- download_jhu_csse_covid19_data(cached = FALSE)
+} 
+if (data_source == 0) {
+  df_ecdc <- download_ecdc_covid19_data(cached = FALSE)
+}
+
 df_owid <- download_owid_testing_data(cached = TRUE) # OWID data
 df_wb   <- download_wbank_data(cached = TRUE) # world bank data
 ```
@@ -73,10 +81,17 @@ df_wb   <- download_wbank_data(cached = TRUE) # world bank data
 
 Generate new cases for each country
 ```{r}
-df <- 
-  df_jhu %>% 
-  mutate(cases = confirmed - lag(confirmed, 1)) %>% 
+if (data_source == 1) {
+df <-
+  df_jhu %>%
+  mutate(cases = confirmed - lag(confirmed, 1)) %>%
   select(iso3c, date, cases)
+} 
+if (data_source == 0) {
+df <- 
+  df_ecdc %>% 
+  select(iso3c, date, cases)
+}
 ```
 
 Generate new tests for each country
@@ -377,7 +392,7 @@ p_R <- df_R_q %>%
     subtitle = "Israel vs. OECD median and interquartile range",
     color = "",
     lty = "",
-    caption = "Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nData: Johns Hopkins University Center for Systems Science and Engineering."
+    caption = "Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nData: ECDC."
   ) +
   scale_x_date(labels = date_format("%d-%m")) +
   theme_ipsum() +
@@ -436,7 +451,7 @@ p_cases <- df_oecd_cases_q %>%
     subtitle = "Israel vs. OECD median and interquartile range",
     y = "Cases per 1 million",
     x = "",
-    caption = "Notes: 7-day moving average\nData: Johns Hopkins University Center for Systems Science and Engineering."
+    caption = "Notes: 7-day moving average\nData: ECDC."
   ) +
   scale_x_date(labels = date_format("%d-%m")) +
   theme_ipsum() +
