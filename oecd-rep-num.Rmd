@@ -383,8 +383,8 @@ p_R <- df_R_q %>%
   annotate("rect", xmin = last_date, xmax = last_date + days(10), ymin = -Inf, ymax = +Inf, alpha = 0.3) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0.5, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
-  annotate("label", x = last_date + days(5), y = 1.1, label = label_oecd, color = "#6DCD59", size = 3.5) +
-  annotate("label", x = last_date + days(5), y = 0.9, label = label_israel, color = "#3E4A89", size = 3.5) +
+  annotate("label", x = last_date + days(5), y = last_oecd - 0.1, label = label_oecd, color = "#6DCD59", size = 3.5) +
+  annotate("label", x = last_date + days(5), y = last_israel + 0.1, label = label_israel, color = "#3E4A89", size = 3.5) +
   labs(
     y = expression("R"[t]),
     x = "",
