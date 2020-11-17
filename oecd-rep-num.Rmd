@@ -447,7 +447,7 @@ p_cases <- df_oecd_cases_q %>%
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
   labs(
-    title = "New cases",
+    title = "New cases per 1 million",
     subtitle = "Israel vs. OECD median and interquartile range",
     y = "Cases per 1 million",
     x = "",
