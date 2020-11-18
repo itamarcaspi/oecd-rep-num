@@ -37,6 +37,7 @@ library(hrbrthemes)  # for a nice figure theme
 library(zoo)         # for rolling means
 library(gghighlight) # for highlighting plots
 library(patchwork)   # for combining separate ggplots
+library(glue)        # for pasting strings
 ```
 
 ## Set parameters
@@ -343,6 +344,17 @@ Set start date for all figures
 plot_start <- ymd("2020-09-01") 
 ```
 
+Set caption by source
+```{r}
+if (data_source == 1) {
+  data_source_name <- "JHU-CSSE"
+} 
+if (data_source == 0) {
+  data_source_name <- "ECDC"
+}
+```
+
+
 ### $R_t$
 Store information regarding the latest values (will be used in the plot to annotate the lines.)
 ```{r}
@@ -383,8 +395,8 @@ p_R <- df_R_q %>%
   annotate("rect", xmin = last_date, xmax = last_date + days(10), ymin = -Inf, ymax = +Inf, alpha = 0.3) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0.5, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
-  annotate("label", x = last_date + days(5), y = last_oecd - 0.1, label = label_oecd, color = "#6DCD59", size = 3.5) +
-  annotate("label", x = last_date + days(5), y = last_israel + 0.1, label = label_israel, color = "#3E4A89", size = 3.5) +
+  annotate("label", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
+  annotate("label", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
   labs(
     y = expression("R"[t]),
     x = "",
@@ -392,7 +404,7 @@ p_R <- df_R_q %>%
     subtitle = "Israel vs. OECD median and interquartile range",
     color = "",
     lty = "",
-    caption = "Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nData: ECDC."
+    caption = glue("Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nData: {data_source_name}.")
   ) +
   scale_x_date(labels = date_format("%d-%m")) +
   theme_ipsum() +
@@ -447,11 +459,11 @@ p_cases <- df_oecd_cases_q %>%
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
   labs(
-    title = "New cases per 1 million",
+    title = "New Cases Per 1 Million",
     subtitle = "Israel vs. OECD median and interquartile range",
     y = "Cases per 1 million",
     x = "",
-    caption = "Notes: 7-day moving average\nData: ECDC."
+    caption = glue("Notes: 7-day moving average\nData: {data_source_name}.")
   ) +
   scale_x_date(labels = date_format("%d-%m")) +
   theme_ipsum() +
