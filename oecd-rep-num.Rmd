@@ -43,7 +43,7 @@ library(glue)        # for pasting strings
 ## Set parameters
 
 ```{r}
-data_source <- 0   # which data source to use (1=JHU 0=ECDC)
+data_source <- 1   # which data source to use (1=JHU 0=ECDC)
 window      <- 7   # smoothing window (days)
 mean_si     <- 4.5 # mean of the serial interval
 std_si      <- 3.5 # standard deviation of the serial interval
@@ -341,7 +341,7 @@ df_oecd_tests_q <-
 
 Set start date for all figures
 ```{r}
-plot_start <- ymd("2020-09-01") 
+plot_start <- ymd("2020-09-01")
 ```
 
 Set caption by source
@@ -395,7 +395,7 @@ p_R <- df_R_q %>%
   annotate("rect", xmin = last_date, xmax = last_date + days(10), ymin = -Inf, ymax = +Inf, alpha = 0.3) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0.5, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
-  annotate("label", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
+  annotate("label", x = last_date + days(5), y = last_oecd-0.1, label = label_oecd, color = "#6DCD59", size = 3.5) +
   annotate("label", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
   labs(
     y = expression("R"[t]),

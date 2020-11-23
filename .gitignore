@@ -3,5 +3,10 @@
 .RData
 .Ruserdata
 
+oecd-mobility.Rmd
+output/oecd-workplaces.csv
+output/oecd-retail-recreation.csv
+plots/economic-mobility-oecd.png
+
 /literature
 /data
