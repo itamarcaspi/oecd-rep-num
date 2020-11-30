@@ -38,14 +38,11 @@ library(zoo)         # for rolling means
 library(gghighlight) # for highlighting plots
 library(patchwork)   # for combining separate ggplots
 library(glue)        # for pasting strings
-library(showtext)    # for nicer fonts
 ```
 
 ```{r, include=FALSE}
-showtext_auto()
 theme_set(theme_ipsum())
 ```
-
 
 ## Set parameters
 
