@@ -38,7 +38,14 @@ library(zoo)         # for rolling means
 library(gghighlight) # for highlighting plots
 library(patchwork)   # for combining separate ggplots
 library(glue)        # for pasting strings
+library(showtext)    # for nicer fonts
 ```
+
+```{r, include=FALSE}
+showtext_auto()
+theme_set(theme_ipsum())
+```
+
 
 ## Set parameters
 
@@ -48,7 +55,6 @@ window      <- 7   # smoothing window (days)
 mean_si     <- 4.5 # mean of the serial interval
 std_si      <- 3.5 # standard deviation of the serial interval
 ```
-
 
 ## Lockdown dates
 
@@ -407,7 +413,6 @@ p_R <- df_R_q %>%
     caption = glue("Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nData: {data_source_name}.")
   ) +
   scale_x_date(labels = date_format("%d-%m")) +
-  theme_ipsum() +
   theme(
     legend.position="top",
     plot.caption = element_text(hjust = 0)
@@ -466,7 +471,6 @@ p_cases <- df_oecd_cases_q %>%
     caption = glue("Notes: 7-day moving average\nData: {data_source_name}.")
   ) +
   scale_x_date(labels = date_format("%d-%m")) +
-  theme_ipsum() +
   theme(
     legend.position="top",
     plot.caption = element_text(hjust = 0)
@@ -522,7 +526,6 @@ p_tests <- df_oecd_tests_q %>%
     caption = "Notes: 7-day moving average.\nData: Our World in Data."
   ) +
   scale_x_date(labels = date_format("%d-%m")) +
-  theme_ipsum() +
   theme(
     legend.position="top",
     plot.caption = element_text(hjust = 0)
