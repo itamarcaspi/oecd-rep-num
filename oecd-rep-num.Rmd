@@ -17,8 +17,8 @@ abstract: |
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  eval = TRUE,
-  echo = TRUE,
+  eval    = TRUE,
+  echo    = TRUE,
   warning = FALSE,
   message = FALSE
 )
@@ -382,24 +382,24 @@ p_R <- df_R_q %>%
   geom_line(
     aes(x = date, y = q50, color = "OECD median"),
     size = 1,
-    color = "#6DCD59"
+    color = "#2d003f"
   ) +
   geom_line(
     aes(x = date, y = isr_rep_num),
-    color = "#3E4A89",
+    color = "#05827e",
     size = 1,
   ) +
   geom_ribbon(
     aes(ymin = q_down, ymax = q_up),
-    fill = "#6DCD59",
-    alpha = 0.4
+    fill = "#2d003f",
+    alpha = 0.2
   ) +
   geom_hline(aes(yintercept = 1), color = "black", size = 0.5) +
-  annotate("rect", xmin = last_date, xmax = last_date + days(10), ymin = -Inf, ymax = +Inf, alpha = 0.3) +
+  annotate("rect", fill = "#ffe612", xmin = last_date, xmax = last_date + days(10), ymin = -Inf, ymax = +Inf, alpha = 0.4) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0.5, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
-  annotate("label", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
-  annotate("label", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
+  annotate("label", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#2d003f", size = 3.5) +
+  annotate("label", x = last_date + days(5), y = last_israel, label = label_israel, color = "#05827e", size = 3.5) +
   labs(
     y = expression("R"[t]),
     x = "",
@@ -407,7 +407,7 @@ p_R <- df_R_q %>%
     subtitle = "Israel vs. OECD median and interquartile range",
     color = "",
     lty = "",
-    caption = glue("Notes: Gray shaded area denotes the 10-days between infection and outpatiant testing.\nData: {data_source_name}.")
+    caption = glue("Notes: Yellow shaded area denotes the 10-days between infection and outpatiant testing.\nData: {data_source_name}.")
   ) +
   scale_x_date(labels = date_format("%d-%m")) +
   theme(
@@ -444,20 +444,20 @@ p_cases <- df_oecd_cases_q %>%
   geom_line(
     aes(x = date, y = q50, color = "OECD median"),
     size = 1,
-    color = "#6DCD59"
+    color = "#2d003f"
   ) +
   geom_line(
     aes(x = date, y = ISR),
-    color = "#3E4A89",
+    color = "#05827e",
     size = 1,
   ) +
   geom_ribbon(
     aes(ymin = q_down, ymax = q_up),
-    fill = "#6DCD59",
-    alpha = 0.4
+    fill = "#2d003f",
+    alpha = 0.2
   ) +
-  annotate("label", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
-  annotate("label", x = last_date + days(5), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
+  annotate("label", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#2d003f", size = 3.5) +
+  annotate("label", x = last_date + days(5), y = last_israel, label = label_israel, color = "#05827e", size = 3.5) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
   labs(
@@ -499,22 +499,22 @@ p_tests <- df_oecd_tests_q %>%
   geom_line(
     aes(x = date, y = q50, color = "OECD median"),
     size = 1,
-    color = "#6DCD59"
+    color = "#2d003f"
   ) +
   geom_line(
     aes(x = date, y = ISR),
-    color = "#3E4A89",
+    color = "#05827e",
     size = 1,
   ) +
   geom_ribbon(
     aes(ymin = q_down, ymax = q_up),
-    fill = "#6DCD59",
-    alpha = 0.4
+    fill = "#2d003f",
+    alpha = 0.2
   ) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
-  annotate("label", x = last_date + days(2), y = last_oecd, label = label_oecd, color = "#6DCD59", size = 3.5) +
-  annotate("label", x = last_date + days(2), y = last_israel, label = label_israel, color = "#3E4A89", size = 3.5) +
+  annotate("label", x = last_date + days(2), y = last_oecd, label = label_oecd, color = "#2d003f", size = 3.5) +
+  annotate("label", x = last_date + days(2), y = last_israel, label = label_israel, color = "#05827e", size = 3.5) +
   labs(
     title = "Positivity rate",
     subtitle = "Israel vs. OECD median and interquartile range",
