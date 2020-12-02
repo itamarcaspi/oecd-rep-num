@@ -392,7 +392,7 @@ p_R <- df_R_q %>%
   geom_ribbon(
     aes(ymin = q_down, ymax = q_up),
     fill = "#2d003f",
-    alpha = 0.2
+    alpha = 0.1
   ) +
   geom_hline(aes(yintercept = 1), color = "black", size = 0.5) +
   annotate("rect", fill = "#ffe612", xmin = last_date, xmax = last_date + days(10), ymin = -Inf, ymax = +Inf, alpha = 0.4) +
@@ -454,7 +454,7 @@ p_cases <- df_oecd_cases_q %>%
   geom_ribbon(
     aes(ymin = q_down, ymax = q_up),
     fill = "#2d003f",
-    alpha = 0.2
+    alpha = 0.1
   ) +
   annotate("label", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#2d003f", size = 3.5) +
   annotate("label", x = last_date + days(5), y = last_israel, label = label_israel, color = "#05827e", size = 3.5) +
@@ -509,7 +509,7 @@ p_tests <- df_oecd_tests_q %>%
   geom_ribbon(
     aes(ymin = q_down, ymax = q_up),
     fill = "#2d003f",
-    alpha = 0.2
+    alpha = 0.1
   ) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
