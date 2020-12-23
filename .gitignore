@@ -12,6 +12,7 @@ plots/economic-mobility-oecd.png
 /data
 /results
 /logs
+/ppt
 rep-num-epinow.Rmd
 
 git-script.txt
