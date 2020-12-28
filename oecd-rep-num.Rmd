@@ -59,10 +59,11 @@ std_si      <- 3.5 # standard deviation of the serial interval
 events <- 
   tribble(
     ~date, ~event,
-    ymd("2020-09-18"), "Lockdown start",
+    ymd("2020-09-18"), "2nd lockdown start",
     ymd("2020-10-18"), "Exit phase 1",
     ymd("2020-11-01"), "Exit phase 2",
-    ymd("2020-11-08"), "Exit phase 3"
+    ymd("2020-11-08"), "Exit phase 3",
+    ymd("2020-12-27"), "3rd lockdown start"
   )
 ```
 
