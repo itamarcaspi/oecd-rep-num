@@ -8,6 +8,9 @@ output/oecd-workplaces.csv
 output/oecd-retail-recreation.csv
 plots/economic-mobility-oecd.png
 
+oecd-vaccine.Rmd
+plots/vaccive.png
+
 /literature
 /data
 /results

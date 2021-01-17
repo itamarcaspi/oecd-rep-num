@@ -30,7 +30,6 @@ knitr::opts_chunk$set(
 library(tidyverse)   # for wrangling and plotting data
 library(EpiEstim)    # for estimating R_t
 library(lubridate)   # for handling dates
-library(tidycovid19) # for downloading ECDC data
 library(countrycode) # for handling country codes
 library(scales)      # for dates on the x-axis
 library(hrbrthemes)  # for a nice figure theme
@@ -47,7 +46,6 @@ theme_set(theme_ipsum())
 ## Set parameters
 
 ```{r}
-data_source <- 1   # which data source to use (1=JHU 0=ECDC)
 window      <- 7   # smoothing window (days)
 mean_si     <- 4.5 # mean of the serial interval
 std_si      <- 3.5 # standard deviation of the serial interval
@@ -59,59 +57,23 @@ std_si      <- 3.5 # standard deviation of the serial interval
 events <- 
   tribble(
     ~date, ~event,
-    ymd("2020-09-18"), "2nd lockdown start",
-    ymd("2020-10-18"), "Exit phase 1",
-    ymd("2020-11-01"), "Exit phase 2",
-    ymd("2020-11-08"), "Exit phase 3",
-    ymd("2020-12-27"), "3rd lockdown start"
+    # ymd("2020-09-18"), "2nd lockdown start",
+    # ymd("2020-10-18"), "Exit phase 1",
+    # ymd("2020-11-01"), "Exit phase 2",
+    # ymd("2020-11-08"), "Exit phase 3",
+    ymd("2020-12-27"),   "3rd lockdown",
+    ymd("2021-01-07"),   "Tightening"
   )
 ```
 
 ## Read data
 
-Download cases, tests, and population data using the [`{tidycovid19}`](https://joachim-gassen.github.io/tidycovid19/) package
+Download cases and tests data from [OWID GitHub repo](https://github.com/owid/covid-19-data/tree/master/public/data)
 ```{r}
-if (data_source == 1) {
-  df_jhu  <- download_jhu_csse_covid19_data(cached = FALSE)
-} 
-if (data_source == 0) {
-  df_ecdc <- download_ecdc_covid19_data(cached = FALSE)
-}
-
-df_owid <- download_owid_testing_data(cached = TRUE) # OWID data
-df_wb   <- download_wbank_data(cached = TRUE) # world bank data
-```
-
-## Process data
-
-Generate new cases for each country
-```{r}
-if (data_source == 1) {
-df <-
-  df_jhu %>%
-  mutate(cases = confirmed - lag(confirmed, 1)) %>%
-  select(iso3c, date, cases)
-} 
-if (data_source == 0) {
-df <- 
-  df_ecdc %>% 
-  select(iso3c, date, cases)
-}
-```
-
-Generate new tests for each country
-```{r}
-df_tests <- df_owid %>% 
-  mutate(tests = total_tests - lag(total_tests, 1)) %>% 
-  select(iso3c, date, tests)
-```
-
-Join dataframes
-```{r}
-df <- 
-  df %>% 
-  left_join(df_tests) %>% 
-  mutate(positive_rate = (cases / tests) * 100)
+df_cases_raw <- 
+  read_csv(
+    "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/jhu/new_cases_per_million.csv"
+  )
 ```
 
 ## Filter OECD countries
@@ -141,12 +103,14 @@ oecd_iso3c <-
   )
 ```
 
-Filter OECD countries
+Filter OECD countries and tidy the data
 ```{r}
-df_oecd <- 
-  df %>% 
-  filter(iso3c %in% oecd_iso3c) %>% 
-  left_join(df_wb)
+df_cases <- 
+  df_cases_raw %>% 
+  pivot_longer(-date, names_to = "country", values_to = "cases") %>% 
+  mutate(iso3c = countrycode(country, "country.name", "iso3c")) %>%
+  select(date, iso3c, cases) %>% 
+  filter(iso3c %in% oecd_iso3c)
 ```
 
 ## Set smoothing window
@@ -154,8 +118,8 @@ df_oecd <-
 Here `window` holds the size of the window (default is 7 days)
 ```{r}
 obs <- nrow(
-  df_oecd %>% 
-    filter(iso3c == "ISR", date >= ymd("2020-03-15"))
+  df_cases %>% 
+    filter(iso3c == "ISR", date >= ymd("2020-09-15"))
 )
 
 t_start <- seq(2, obs - window + 1) 
@@ -199,9 +163,9 @@ output <- c()
 for (i in oecd_iso3c){
 
   incid <- 
-    df_oecd %>%
+    df_cases %>%
     filter(
-      date >= ymd("2020-03-15"),
+      date >= ymd("2020-09-15"),
       iso3c == i
     ) %>%
     select(date, cases) %>%
@@ -220,9 +184,9 @@ for (i in oecd_iso3c){
 Now we estimate Israel $R_t$ and add it to the output table.
 ```{r}
 incid <- 
-  df_oecd %>%
+  df_cases %>%
   filter(
-    date >= ymd("2020-03-15"),
+    date >= ymd("2020-09-15"),
     iso3c == "ISR"
   ) %>%
   select(date, cases) %>%
@@ -268,14 +232,14 @@ df_R_q <-
   df_R %>% 
   rowwise() %>% 
   mutate(
-    q50    = quantile((c_across(rep_num:V29)), probs = 0.50),
-    q_up   = quantile((c_across(rep_num:V29)), probs = 0.75),
-    q_down = quantile((c_across(rep_num:V29)), probs = 0.25)
+    q50    = quantile((c_across(rep_num:V34)), probs = 0.50),
+    q_up   = quantile((c_across(rep_num:V34)), probs = 0.75),
+    q_down = quantile((c_across(rep_num:V34)), probs = 0.25)
   ) %>%
   select(isr_rep_num, starts_with("q")) %>% 
   ungroup() %>% 
   mutate(
-    date = seq(from = ymd("2020-03-12"), by = "1 day", length.out = dim(output)[[1]])
+    date = seq(from = ymd("2020-09-12"), by = "1 day", length.out = dim(output)[[1]])
   )
 ```
 
@@ -283,24 +247,21 @@ df_R_q <-
 
 Generate 7-day rolling mean of daily cases
 ```{r}
-df_oecd_cases <- 
-  df_oecd %>% 
-  filter(
-    population >= 1e6,
-    date >= ymd("2020-03-01")
-  ) %>% 
+df_cases_ma <- 
+  df_cases %>% 
+  group_by(iso3c) %>% 
   mutate(
-    cases_ma = rollmean(cases, 7, na.pad=TRUE, align="right"),
-    cases_ma_pc = cases_ma / population * 1e6
+    cases = rollmean(cases, 7, na.pad=TRUE, align="right")
   ) %>%
-  select(iso3c, date, cases_ma_pc)
+  ungroup() %>% 
+  select(date, iso3c, cases)
 ```
 
 Calculate the median and interquartile range, by rows (i.e., dates)
 ```{r}
-df_oecd_cases_q <- 
-  df_oecd_cases %>% 
-  pivot_wider(date, names_from = "iso3c", values_from = "cases_ma_pc") %>% 
+df_cases_q <- 
+  df_cases_ma %>% 
+  pivot_wider(names_from = "iso3c", values_from = "cases") %>%  
   rowwise() %>% 
   mutate(
     q50    = quantile((c_across(AUS:USA)), probs = 0.50, na.rm = TRUE),
@@ -311,53 +272,17 @@ df_oecd_cases_q <-
   ungroup()
 ```
 
-### Tests
-
-```{r}
-df_oecd_tests <- 
-  df_oecd %>% 
-  filter(
-    population >= 1e6,
-    date >= ymd("2020-03-01")
-  ) %>% 
-  mutate(
-    positive_rate_ma = rollmean(positive_rate, 7, na.pad=TRUE, align="right"),
-  ) %>%
-  select(iso3c, date, positive_rate_ma)
-```
-
-```{r}
-df_oecd_tests_q <- 
-  df_oecd_tests %>% 
-  pivot_wider(date, names_from = "iso3c", values_from = "positive_rate_ma") %>% 
-  rowwise() %>% 
-  mutate(
-    q50    = quantile((c_across(AUS:USA)), probs = 0.50, na.rm = TRUE),
-    q_up   = quantile((c_across(AUS:USA)), probs = 0.75, na.rm = TRUE),
-    q_down = quantile((c_across(AUS:USA)), probs = 0.25, na.rm = TRUE)
-  ) %>%
-  select(date, ISR, starts_with("q")) %>% 
-  ungroup() %>% 
-  drop_na()
-```
-
 ## Plot
 
 Set start date for all figures
 ```{r}
-plot_start <- ymd("2020-09-01")
+plot_start <- ymd("2020-12-15")
 ```
 
 Set caption by source
 ```{r}
-if (data_source == 1) {
-  data_source_name <- "JHU-CSSE"
-} 
-if (data_source == 0) {
-  data_source_name <- "ECDC"
-}
+data_source_name <- "JHU-CSSE, OWID"
 ```
-
 
 ### $R_t$
 Store information regarding the latest values (will be used in the plot to annotate the lines.)
@@ -369,8 +294,8 @@ last_date   <- last_obs %>% pull(date)
 last_oecd   <- last_obs %>% pull(q50) %>% round(2) %>% unname()
 last_israel <- last_obs %>% pull(isr_rep_num) %>% round(2) %>% unname()
 
-label_israel <- paste0("Israel\n", last_israel)
-label_oecd   <- paste0("OECD\n", last_oecd)
+label_israel <- paste0("Israel\n", last_israel %>% format(nsmall = 2))
+label_oecd   <- paste0("OECD\n", last_oecd %>% format(nsmall = 2))
 ```
 
 Plot $R_t$
@@ -399,8 +324,8 @@ p_R <- df_R_q %>%
   annotate("rect", fill = "#ffe612", xmin = last_date, xmax = last_date + days(10), ymin = -Inf, ymax = +Inf, alpha = 0.4) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0.5, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
-  annotate("label", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#2d003f", size = 3.5) +
-  annotate("label", x = last_date + days(5), y = last_israel, label = label_israel, color = "#05827e", size = 3.5) +
+  annotate("label", x = last_date + days(1), y = last_oecd-0.05, label = label_oecd, color = "#2d003f", size = 3.5) +
+  annotate("label", x = last_date + days(1), y = last_israel+0.05, label = label_israel, color = "#05827e", size = 3.5) +
   labs(
     y = expression("R"[t]),
     x = "",
@@ -424,8 +349,8 @@ p_R
 
 Store information regarding the latest values (will be used in the plot to annotate the lines.)
 ```{r}
-last_obs <- df_oecd_cases_q %>% 
-  slice(dim(df_oecd_cases_q)[[1]])
+last_obs <- df_cases_q %>% 
+  slice(dim(df_cases_q)[[1]])
 
 last_date   <- last_obs %>% pull(date)
 last_oecd   <- last_obs %>% pull(q50) %>% round(0) %>% unname()
@@ -437,7 +362,8 @@ label_oecd   <- paste0("OECD\n", last_oecd)
 
 Plot daily new cases
 ```{r}
-p_cases <- df_oecd_cases_q %>% 
+p_cases <- 
+  df_cases_q %>% 
   filter(
     date >= plot_start
   ) %>% 
@@ -457,14 +383,14 @@ p_cases <- df_oecd_cases_q %>%
     fill = "#2d003f",
     alpha = 0.1
   ) +
-  annotate("label", x = last_date + days(5), y = last_oecd, label = label_oecd, color = "#2d003f", size = 3.5) +
-  annotate("label", x = last_date + days(5), y = last_israel, label = label_israel, color = "#05827e", size = 3.5) +
+  annotate("label", x = last_date + days(1), y = last_oecd, label = label_oecd, color = "#2d003f", size = 3.5) +
+  annotate("label", x = last_date + days(1), y = last_israel, label = label_israel, color = "#05827e", size = 3.5) +
   geom_vline(data = events, aes(xintercept = date), linetype = 2) +
   geom_text(data = events, aes(x=date, y=0, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
   labs(
     title = "New Cases Per 1 Million",
     subtitle = "Israel vs. OECD median and interquartile range",
-    y = "Cases per 1 million",
+    y = "Daily cases per 1 million",
     x = "",
     caption = glue("Notes: 7-day moving average\nData: {data_source_name}.")
   ) +
@@ -477,69 +403,12 @@ p_cases <- df_oecd_cases_q %>%
 p_cases
 ```
 
-### Positivity rate
-
-```{r}
-last_obs <- df_oecd_tests_q %>% 
-  slice(dim(df_oecd_tests_q)[[1]])
-
-last_date   <- last_obs %>% pull(date)
-last_oecd   <- last_obs %>% pull(q50) %>% round(1) %>% unname()
-last_israel <- last_obs %>% pull(ISR) %>% round(1) %>% unname()
-
-label_israel <- paste0("Israel\n", last_israel)
-label_oecd   <- paste0("OECD\n", last_oecd)
-```
-
-```{r}
-p_tests <- df_oecd_tests_q %>%
-  filter(
-    date >= plot_start
-  ) %>% 
-  ggplot(aes(x = date, y = q50)) +
-  geom_line(
-    aes(x = date, y = q50, color = "OECD median"),
-    size = 1,
-    color = "#2d003f"
-  ) +
-  geom_line(
-    aes(x = date, y = ISR),
-    color = "#05827e",
-    size = 1,
-  ) +
-  geom_ribbon(
-    aes(ymin = q_down, ymax = q_up),
-    fill = "#2d003f",
-    alpha = 0.1
-  ) +
-  geom_vline(data = events, aes(xintercept = date), linetype = 2) +
-  geom_text(data = events, aes(x=date, y=0, label=event), size=3, angle=90, vjust=-0.4, hjust=0) +
-  annotate("label", x = last_date + days(2), y = last_oecd, label = label_oecd, color = "#2d003f", size = 3.5) +
-  annotate("label", x = last_date + days(2), y = last_israel, label = label_israel, color = "#05827e", size = 3.5) +
-  labs(
-    title = "Positivity rate",
-    subtitle = "Israel vs. OECD median and interquartile range",
-    y = "Percent",
-    x = "",
-    caption = "Notes: 7-day moving average.\nData: Our World in Data."
-  ) +
-  scale_x_date(labels = date_format("%d-%m")) +
-  theme(
-    legend.position="top",
-    plot.caption = element_text(hjust = 0)
-  )
-
-p_tests
-```
-
-
 ## Save output
 
 Save data to a csv file.
 ```{r}
 write_csv(df_R_q, path = "output/oecd-rep-num.csv")
-write_csv(df_oecd_cases_q, path = "output/oecd-cases.csv")
-write_csv(df_oecd_tests_q, path = "output/oecd-test.csv")
+write_csv(df_cases_q, path = "output/oecd-cases.csv")
 ```
 
 plot side $R_t$ and cases by side using [`{patchwork}`](https://patchwork.data-imaginist.com/) and save as `png`.
@@ -547,6 +416,8 @@ plot side $R_t$ and cases by side using [`{patchwork}`](https://patchwork.data-i
 p <- p_R + p_cases +
   plot_annotation(caption = paste0("Timestamp: ", now())) &
   theme(text = element_text('mono', size = 14))
+
+p
 
 ggsave(
   filename = "plots/r-cases-oecd.png",
