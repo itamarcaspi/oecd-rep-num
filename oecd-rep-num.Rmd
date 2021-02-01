@@ -232,9 +232,9 @@ df_R_q <-
   df_R %>% 
   rowwise() %>% 
   mutate(
-    q50    = quantile((c_across(rep_num:V34)), probs = 0.50),
-    q_up   = quantile((c_across(rep_num:V34)), probs = 0.75),
-    q_down = quantile((c_across(rep_num:V34)), probs = 0.25)
+    q50    = quantile((c_across(rep_num:V32)), probs = 0.50),
+    q_up   = quantile((c_across(rep_num:V32)), probs = 0.75),
+    q_down = quantile((c_across(rep_num:V32)), probs = 0.25)
   ) %>%
   select(isr_rep_num, starts_with("q")) %>% 
   ungroup() %>% 
@@ -342,7 +342,7 @@ p_R <- df_R_q %>%
   ) +
   ylim(0.5,1.5) 
 
-p_R
+# p_R
 ```
 
 ### New cases
@@ -400,7 +400,7 @@ p_cases <-
     plot.caption = element_text(hjust = 0)
   )
 
-p_cases
+# p_cases
 ```
 
 ## Save output
