@@ -62,7 +62,8 @@ events <-
     # ymd("2020-11-01"), "Exit phase 2",
     # ymd("2020-11-08"), "Exit phase 3",
     ymd("2020-12-27"),   "3rd lockdown",
-    ymd("2021-01-07"),   "Tightening"
+    ymd("2021-01-07"),   "3rd lockdown tightening",
+    ymd("2021-01-07"),   "Exit phase 1"
   )
 ```
 
